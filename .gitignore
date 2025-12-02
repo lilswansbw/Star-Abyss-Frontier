@@ -52,3 +52,4 @@ proj.android/local.properties
 
 .DS_Store
 Thumbs.db
+!cocos2d/**/*.lib
