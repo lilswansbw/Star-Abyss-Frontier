@@ -1,7 +1,7 @@
 # 🌌 Star Abyss Frontier (星渊前线)
 
 > 同济大学软件工程 2025 C++ 期末课程项目
-> **Cocos2d-x 4.0** | **C++17** | **OOD Architecture**
+> **Cocos2d-x 3.17** | **C++17** | **OOD Architecture**
 
 ![Build Status](https://img.shields.io/badge/build-passing-brightgreen)
 ![Platform](https://img.shields.io/badge/platform-Android%20%7C%20iOS%20%7C%20Windows-blue)
