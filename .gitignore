@@ -1,55 +1,32 @@
+# --- Cocos2d-x ---
+cocos2d/
+.cocos-project.json
+CMakeLists.txt
 
-*.o
-*.obj
-*.d
-*.idb
-*.pdb
-*.ilk
-*.map
-*.pch
-*.gch
-*.lib
-*.a
-*.dll
-*.so
-*.dylib
-*.exe
-*.out
-*.app
+# --- proj.win32 文件夹下的 VS 临时文件 ---
+proj.win32/Debug.win32/
+proj.win32/Release.win32/
+proj.win32/.vs/
 
-.vs/
-Debug/
-Release/
-x64/
-x86/
-build/
+# ---  VS  ---
 *.suo
 *.user
 *.userosscache
 *.sln.docstates
-*.aps
 
-.vscode/
+# ---  C++  ---
+*.o
+*.obj
+*.exe
+*.out
+*.so
+*.a
+*.lib
+*.dll
 
-CMakeCache.txt
-CMakeFiles/
-cmake_install.cmake
-install_manifest.txt
-compile_commands.json
-Makefile
-
-bin/
-temp/
-obj/
-gen/
-assets/
-library/
-local/
-proj.android/app/build/
-proj.android/.gradle/
-proj.android/local.properties
-*.apk
-
-.DS_Store
-Thumbs.db
-!cocos2d/**/*.lib
+# ---  日志  ---
+*.tlog/
+*.tlog
+*.log
+*.out
+*.err
