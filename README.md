@@ -23,14 +23,11 @@
 #### 实体类层级 (Entity Hierarchy)
 所有的游戏对象均继承自 `BaseEntity`，实现了统一的更新与渲染接口：
 
-```text
-BaseEntity (Abstract Class)
-├── BasePlane (飞机基类)
-│   ├── PlayerPlane (封装了单例模式与触控逻辑)
-│   └── BaseEnemy (敌机基类)
-│       ├── KamikazeEnemy (行为：直线冲撞)
-│       ├── ShootingEnemy (行为：定点射击)
-│       └── BossEnemy (行为：多阶段状态机)
-└── BaseBullet (子弹基类)
-    ├── StraightBullet (线性弹道)
-    └── TrackingBullet (追踪算法)
+## 📅 开发日志 (Development Log)
+
+| 日期 (Date) | 作者 (Author) | 更新内容 (Change Log) | 备注 (Note) |
+| :--- | :--- | :--- | :--- |
+| **2025.12.01** | **宋博文** | ✅ 完成 Cocos2d-x 4.0 环境搭建 (Python 2.7 + CMake)<br>✅ 初始化项目仓库，配置 `.gitignore` | 环境配置攻坚 |
+| **2025.12.01** | **董泽福** | ✅ 搜集第一版美术素材 (飞机、背景、子弹)<br>✅ 成功运行 Hello World 示例 | 资源准备 |
+| **2025.12.02** | **团队** | 🔄 **重构**：决定放弃 Box2D 物理引擎，转为开发 STG 射击游戏<br>✨ 实现主角飞机跟随手指触摸移动逻辑 | 核心玩法变更 |
+| **2025.12.02** | **团队** | 🚧 决定放弃Cocos2d-x 4.0，转而使用Cocos2d-x 3.17
