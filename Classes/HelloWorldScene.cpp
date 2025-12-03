@@ -1,29 +1,4 @@
-/****************************************************************************
- Copyright (c) 2017-2018 Xiamen Yaji Software Co., Ltd.
- 
- http://www.cocos2d-x.org
- 
- Permission is hereby granted, free of charge, to any person obtaining a copy
- of this software and associated documentation files (the "Software"), to deal
- in the Software without restriction, including without limitation the rights
- to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- copies of the Software, and to permit persons to whom the Software is
- furnished to do so, subject to the following conditions:
- 
- The above copyright notice and this permission notice shall be included in
- all copies or substantial portions of the Software.
- 
- THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- THE SOFTWARE.
- ****************************************************************************/
-
 #include "HelloWorldScene.h"
-#include "SimpleAudioEngine.h"
 
 USING_NS_CC;
 
@@ -32,106 +7,65 @@ Scene* HelloWorld::createScene()
     return HelloWorld::create();
 }
 
-// Print useful error message instead of segfaulting when files are not there.
-static void problemLoading(const char* filename)
-{
-    printf("Error while loading: %s\n", filename);
-    printf("Depending on how you compiled you might have to add 'Resources/' in front of filenames in HelloWorldScene.cpp\n");
-}
-
-// on "init" you need to initialize your instance
+// 初始化函数：游戏开始时执行一次
 bool HelloWorld::init()
 {
-    //////////////////////////////
-    // 1. super init first
-    if ( !Scene::init() )
+    if (!Scene::init())
     {
         return false;
     }
 
     auto visibleSize = Director::getInstance()->getVisibleSize();
     Vec2 origin = Director::getInstance()->getVisibleOrigin();
-
-    /////////////////////////////
-    // 2. add a menu item with "X" image, which is clicked to quit the program
-    //    you may modify it.
-
-    // add a "close" icon to exit the progress. it's an autorelease object
-    auto closeItem = MenuItemImage::create(
-                                           "CloseNormal.png",
-                                           "CloseSelected.png",
-                                           CC_CALLBACK_1(HelloWorld::menuCloseCallback, this));
-
-    if (closeItem == nullptr ||
-        closeItem->getContentSize().width <= 0 ||
-        closeItem->getContentSize().height <= 0)
-    {
-        problemLoading("'CloseNormal.png' and 'CloseSelected.png'");
-    }
-    else
-    {
-        float x = origin.x + visibleSize.width - closeItem->getContentSize().width/2;
-        float y = origin.y + closeItem->getContentSize().height/2;
-        closeItem->setPosition(Vec2(x,y));
+    //初始界面
+    // 1. 创建主角飞机 (确保 Resources 文件夹里有一张叫 player.png 的图，如果没有，先用 CloseNormal.png 代替测试)
+    auto player = Sprite::create("Images/player/myplane.png"); 
+    if (player) {
+        player->setPosition(Vec2(visibleSize.width / 2 + origin.x, visibleSize.height / 4 + origin.y));
+        player->setTag(100); // 给它贴个标签叫100，方便以后找
+        this->addChild(player, 1);
     }
 
-    // create menu, it's an autorelease object
-    auto menu = Menu::create(closeItem, NULL);
-    menu->setPosition(Vec2::ZERO);
-    this->addChild(menu, 1);
+    // 2. 创建触摸监听器 (让飞机跟随手指)
+    auto touchListener = EventListenerTouchOneByOne::create();
+    touchListener->onTouchBegan = [](Touch* touch, Event* event) { return true; };
+    touchListener->onTouchMoved = [=](Touch* touch, Event* event) {
+        // 获取主角
+        auto target = this->getChildByTag(100);
+        if (target) {
+            // 让飞机跟着手指移动
+            target->setPosition(target->getPosition() + touch->getDelta());
+        }
+        };
+    _eventDispatcher->addEventListenerWithSceneGraphPriority(touchListener, this);
 
-    /////////////////////////////
-    // 3. add your codes below...
+    // 1. 创建第一张背景
+    _bg1 = Sprite::create("Images/Background/bg.jpg");
+    _bg1->setAnchorPoint(Vec2::ZERO);
+    _bg1->setPosition(0, 0);
 
-    // add a label shows "Hello World"
-    // create and initialize a label
+    // === 新增：计算缩放比例 ===
+    // 算出要把图片放大多少倍才能填满屏幕宽度
+    float scaleX = visibleSize.width / _bg1->getContentSize().width;
+    float scaleY = visibleSize.height / _bg1->getContentSize().height;
+    // 取宽和高中比较大的那个比例，保证填满屏幕（可能会裁剪掉一点边）
+    float scale = std::max(scaleX, scaleY);
 
-    auto label = Label::createWithTTF("Hello World", "fonts/Marker Felt.ttf", 24);
-    if (label == nullptr)
-    {
-        problemLoading("'fonts/Marker Felt.ttf'");
-    }
-    else
-    {
-        // position the label on the center of the screen
-        label->setPosition(Vec2(origin.x + visibleSize.width/2,
-                                origin.y + visibleSize.height - label->getContentSize().height));
+    _bg1->setScale(scale); // 执行放大
+    this->addChild(_bg1, -1);
 
-        // add the label as a child to this layer
-        this->addChild(label, 1);
-    }
+    // 2. 创建第二张背景
+    _bg2 = Sprite::create("Images/Background/bg.jpg");
+    _bg2->setAnchorPoint(Vec2::ZERO);
+    _bg2->setScale(scale); // 第二张也要放大同样的倍数
 
-    // add "HelloWorld" splash screen"
-    auto sprite = Sprite::create("HelloWorld.png");
-    if (sprite == nullptr)
-    {
-        problemLoading("'HelloWorld.png'");
-    }
-    else
-    {
-        // position the sprite on the center of the screen
-        sprite->setPosition(Vec2(visibleSize.width/2 + origin.x, visibleSize.height/2 + origin.y));
+    // === 关键修改：位置也要变 ===
+    // 因为图变大了，第二张图必须放在第一张图“放大后”的头顶上
+    // getBoundingBox().size.height 获取的是放大后的高度
+    _bg2->setPosition(0, _bg1->getBoundingBox().size.height);
 
-        // add the sprite as a child to this layer
-        this->addChild(sprite, 0);
-    }
+    this->addChild(_bg2, -1);
+
+
     return true;
-}
-
-
-void HelloWorld::menuCloseCallback(Ref* pSender)
-{
-    //Close the cocos2d-x game scene and quit the application
-    Director::getInstance()->end();
-
-    #if (CC_TARGET_PLATFORM == CC_PLATFORM_IOS)
-    exit(0);
-#endif
-
-    /*To navigate back to native iOS screen(if present) without quitting the application  ,do not use Director::getInstance()->end() and exit(0) as given above,instead trigger a custom event created in RootViewController.mm as below*/
-
-    //EventCustom customEndEvent("game_scene_close_event");
-    //_eventDispatcher->dispatchEvent(&customEndEvent);
-
-
 }
