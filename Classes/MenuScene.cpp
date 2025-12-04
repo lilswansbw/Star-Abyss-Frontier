@@ -10,35 +10,57 @@ Scene* MenuScene::createScene()
 
 bool MenuScene::init()
 {
+
     if (!Scene::init()) return false;
 
     auto visibleSize = Director::getInstance()->getVisibleSize();
+    Vec2 origin = Director::getInstance()->getVisibleOrigin();
 
-    // 1. 加背景（和游戏里一样）
-    auto bg = Sprite::create("Images/Background/bg.jpg"); // 确保你有这张图
+    auto bg = Sprite::create("Images/Menu/ezgif-frame-001.jpg");
     if (bg) {
-        // 简单的缩放适配
         float scaleX = visibleSize.width / bg->getContentSize().width;
         float scaleY = visibleSize.height / bg->getContentSize().height;
         bg->setScale(std::max(scaleX, scaleY));
         bg->setPosition(visibleSize.width / 2, visibleSize.height / 2);
-        this->addChild(bg, -1);
+        this->addChild(bg, -1); 
+
+        auto animation = Animation::create();
+
+        for (int i = 1; i <= 180; i++) {
+            std::string name = StringUtils::format("Images/Menu/ezgif-frame-%03d.jpg", i);
+            animation->addSpriteFrameWithFile(name);
+        }
+
+        animation->setDelayPerUnit(0.05f);
+        animation->setRestoreOriginalFrame(true);
+
+        auto animate = Animate::create(animation);
+        bg->runAction(RepeatForever::create(animate));
+    }
+    else {
+        CCLOG("Error: Menu background image not found!");
     }
 
-    // 2. 加游戏标题
-    auto title = Label::createWithSystemFont("Star Abyss Frontier", "Arial", 64);
+    auto title = Label::createWithTTF("Star Abyss Frontier", "fonts/BlackOpsOne-Regular.ttf", 64);
+
+    title->setTextColor(Color4B(0, 255, 255, 255)); 
+    title->enableShadow(Color4B(0, 200, 255, 255), Size(0, 0), 20);
+    title->enableOutline(Color4B::BLACK, 2);        
+    title->enableGlow(Color4B(0, 200, 255, 255));   
+
     title->setPosition(visibleSize.width / 2, visibleSize.height * 0.7);
     this->addChild(title, 1);
 
-    // 3. 加开始按钮 (暂时用关闭图标代替，以后换成 Start.png)
     auto startItem = MenuItemImage::create(
-        "CloseNormal.png",   // 正常状态图片
-        "CloseSelected.png", // 按下状态图片
-        CC_CALLBACK_1(MenuScene::menuStartCallback, this)); // 点击后执行哪个函数
-    startItem->setScale(3.0f); // 放大点方便点
-    startItem->setPosition(visibleSize.width / 2, visibleSize.height * 0.4);
+        "CloseNormal.png",   // 正常状态图
+        "CloseSelected.png", // 按下状态图
+        CC_CALLBACK_1(MenuScene::menuStartCallback, this)); // 绑定回调
 
-    // 4. 必须把按钮放进 Menu 容器里才能点击！
+    if (startItem) {
+        startItem->setScale(3.0f);
+        startItem->setPosition(visibleSize.width / 2, visibleSize.height * 0.4);
+    }
+
     auto menu = Menu::create(startItem, NULL);
     menu->setPosition(Vec2::ZERO);
     this->addChild(menu, 1);
@@ -46,13 +68,11 @@ bool MenuScene::init()
     return true;
 }
 
-// 点击按钮后执行这个：
 void MenuScene::menuStartCallback(Ref* pSender)
 {
     // 创建游戏场景
     auto gameScene = HelloWorld::createScene();
 
-    // 【核心知识点】使用 replaceScene 切换场景
-    // TransitionFade 是加一个淡入淡出的特效，时间 1.0 秒
+    // 切换场景 (带1秒淡入淡出特效)
     Director::getInstance()->replaceScene(TransitionFade::create(1.0f, gameScene));
 }
