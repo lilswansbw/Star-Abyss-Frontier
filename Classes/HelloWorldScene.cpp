@@ -7,7 +7,7 @@ Scene* HelloWorld::createScene()
     return HelloWorld::create();
 }
 
-// ³õÊ¼»¯º¯Êý£ºÓÎÏ·¿ªÊ¼Ê±Ö´ÐÐÒ»´Î
+// ï¿½ï¿½Ê¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ï·ï¿½ï¿½Ê¼Ê±Ö´ï¿½ï¿½Ò»ï¿½ï¿½
 bool HelloWorld::init()
 {
     if (!Scene::init())
@@ -17,49 +17,49 @@ bool HelloWorld::init()
 
     auto visibleSize = Director::getInstance()->getVisibleSize();
     Vec2 origin = Director::getInstance()->getVisibleOrigin();
-    //³õÊ¼½çÃæ
-    //´´½¨Ö÷½Ç·É»ú
+    //ï¿½ï¿½Ê¼ï¿½ï¿½ï¿½ï¿½
+    //ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ç·É»ï¿½
     auto player = Sprite::create("Images/player/myplane.png"); 
     if (player) {
         player->setPosition(Vec2(visibleSize.width / 2 + origin.x, visibleSize.height / 4 + origin.y));
-        player->setTag(100); // ¸øËüÌù¸ö±êÇ©½Ð100£¬·½±ãÒÔºóÕÒ
+        player->setTag(100); // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ç©ï¿½ï¿½100ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ôºï¿½ï¿½ï¿½
         this->addChild(player, 1);
     }
 
-    // 2. ´´½¨´¥Ãþ¼àÌýÆ÷ (ÈÃ·É»ú¸úËæÊÖÖ¸)
+    // 2. ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ (ï¿½Ã·É»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö¸)
     auto touchListener = EventListenerTouchOneByOne::create();
     touchListener->onTouchBegan = [](Touch* touch, Event* event) { return true; };
     touchListener->onTouchMoved = [=](Touch* touch, Event* event) {
-        // »ñÈ¡Ö÷½Ç
+        // ï¿½ï¿½È¡ï¿½ï¿½ï¿½ï¿½
         auto target = this->getChildByTag(100);
         if (target) {
-            // ÈÃ·É»ú¸ú×ÅÊÖÖ¸ÒÆ¶¯
+            // ï¿½Ã·É»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö¸ï¿½Æ¶ï¿½
             target->setPosition(target->getPosition() + touch->getDelta());
         }
         };
     _eventDispatcher->addEventListenerWithSceneGraphPriority(touchListener, this);
 
-    //´´½¨µÚÒ»ÕÅ±³¾°
+    //ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ò»ï¿½Å±ï¿½ï¿½ï¿½
     _bg1 = Sprite::create("Images/Background/bg.jpg");
     _bg1->setAnchorPoint(Vec2::ZERO);
     _bg1->setPosition(0, 0);
 
-    // Ëã³öÒª°ÑÍ¼Æ¬·Å´ó¶àÉÙ±¶²ÅÄÜÌîÂúÆÁÄ»¿í¶È
+    // ï¿½ï¿½ï¿½Òªï¿½ï¿½Í¼Æ¬ï¿½Å´ï¿½ï¿½ï¿½Ù±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä»ï¿½ï¿½ï¿½ï¿½
     float scaleX = visibleSize.width / _bg1->getContentSize().width;
     float scaleY = visibleSize.height / _bg1->getContentSize().height;
-    // È¡¿íºÍ¸ßÖÐ±È½Ï´óµÄÄÇ¸ö±ÈÀý£¬±£Ö¤ÌîÂúÆÁÄ»£¨¿ÉÄÜ»á²Ã¼ôµôÒ»µã±ß£©
+    // È¡ï¿½ï¿½ï¿½Í¸ï¿½ï¿½Ð±È½Ï´ï¿½ï¿½ï¿½Ç¸ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö¤ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä»ï¿½ï¿½ï¿½ï¿½ï¿½Ü»ï¿½Ã¼ï¿½ï¿½ï¿½Ò»ï¿½ï¿½ß£ï¿½
     float scale = std::max(scaleX, scaleY);
 
-    _bg1->setScale(scale); // Ö´ÐÐ·Å´ó
+    _bg1->setScale(scale); // Ö´ï¿½Ð·Å´ï¿½
     this->addChild(_bg1, -1);
 
-    //´´½¨µÚ¶þÕÅ±³¾°
+    //ï¿½ï¿½ï¿½ï¿½ï¿½Ú¶ï¿½ï¿½Å±ï¿½ï¿½ï¿½
     _bg2 = Sprite::create("Images/Background/bg.jpg");
     _bg2->setAnchorPoint(Vec2::ZERO);
-    _bg2->setScale(scale); // µÚ¶þÕÅÒ²Òª·Å´óÍ¬ÑùµÄ±¶Êý
+    _bg2->setScale(scale); // ï¿½Ú¶ï¿½ï¿½ï¿½Ò²Òªï¿½Å´ï¿½Í¬ï¿½ï¿½ï¿½Ä±ï¿½ï¿½ï¿½
 
-    // ÒòÎªÍ¼±ä´óÁË£¬µÚ¶þÕÅÍ¼±ØÐë·ÅÔÚµÚÒ»ÕÅÍ¼¡°·Å´óºó¡±µÄÍ·¶¥ÉÏ
-    // getBoundingBox().size.height »ñÈ¡µÄÊÇ·Å´óºóµÄ¸ß¶È
+    // ï¿½ï¿½ÎªÍ¼ï¿½ï¿½ï¿½ï¿½Ë£ï¿½ï¿½Ú¶ï¿½ï¿½ï¿½Í¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Úµï¿½Ò»ï¿½ï¿½Í¼ï¿½ï¿½ï¿½Å´ï¿½ó¡±µï¿½Í·ï¿½ï¿½ï¿½ï¿½
+    // getBoundingBox().size.height ï¿½ï¿½È¡ï¿½ï¿½ï¿½Ç·Å´ï¿½ï¿½Ä¸ß¶ï¿½
     _bg2->setPosition(0, _bg1->getBoundingBox().size.height);
 
     this->addChild(_bg2, -1);
@@ -69,50 +69,47 @@ bool HelloWorld::init()
     return true;
 }
 
-//´´½¨µ¥¸öµÐ»úËæ»úÎ»ÖÃ+ÏòÏÂÒÆ¶¯
+//ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ð»ï¿½ï¿½ï¿½ï¿½Î»ï¿½ï¿½+ï¿½ï¿½ï¿½ï¿½ï¿½Æ¶ï¿½
 void HelloWorld::createEnemy(float dt)
 {
     auto visibleSize = Director::getInstance()->getVisibleSize();
     Vec2 origin = Director::getInstance()->getVisibleOrigin();
 
-    //´´½¨µÐ»ú
+    //ï¿½ï¿½ï¿½ï¿½ï¿½Ð»ï¿½
     auto enemy = Sprite::create("Images/Enemy/eplane.png");
-    if (enemy) {
+    if (!enemy) {
         enemy->setScale(2.0f);
     }
-    else {
-        return;
-    }
 
-    //Ëæ»úÉèÖÃµÐ»ú³õÊ¼X×ø±ê,µ«ÒªÔÚÆÁÄ»¿í¶È·¶Î§ÄÚ£¬±ÜÃâ³¬³ö±ß½ç
+    //ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ÃµÐ»ï¿½ï¿½ï¿½Ê¼Xï¿½ï¿½ï¿½ï¿½,ï¿½ï¿½Òªï¿½ï¿½ï¿½ï¿½Ä»ï¿½ï¿½ï¿½È·ï¿½Î§ï¿½Ú£ï¿½ï¿½ï¿½ï¿½â³¬ï¿½ï¿½ï¿½ß½ï¿½
     float randomX = origin.x + CCRANDOM_0_1() * (visibleSize.width - enemy->getContentSize().width * enemy->getScaleX());
-    //³õÊ¼Y×ø±ê£ºÔÚÆÁÄ»ÉÏ·½Íâ²à£¬¿ÉÒÔ±ÜÃâÍ»È»³öÏÖ
+    //ï¿½ï¿½Ê¼Yï¿½ï¿½ï¿½ê£ºï¿½ï¿½ï¿½ï¿½Ä»ï¿½Ï·ï¿½ï¿½ï¿½à£¬ï¿½ï¿½ï¿½Ô±ï¿½ï¿½ï¿½Í»È»ï¿½ï¿½ï¿½ï¿½
     float startY = origin.y + visibleSize.height + enemy->getContentSize().height * enemy->getScaleY();
     enemy->setPosition(Vec2(randomX, startY));
 
-    //Ëæ»úÉèÖÃµÐ»úÒÆ¶¯ËÙ¶È2-4Ãë´Ó¶¥²¿·Éµ½ÆÁÄ»µ×²¿
+    //ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ÃµÐ»ï¿½ï¿½Æ¶ï¿½ï¿½Ù¶ï¿½2-4ï¿½ï¿½Ó¶ï¿½ï¿½ï¿½ï¿½Éµï¿½ï¿½ï¿½Ä»ï¿½×²ï¿½
     float moveTime = 2.0f + CCRANDOM_0_1() * 2.0f;
-    //ÒÆ¶¯Ä¿±ê£¬ÆÁÄ»ÏÂ·½Íâ²à³¬³öºóÒÆ³ý
+    //ï¿½Æ¶ï¿½Ä¿ï¿½ê£¬ï¿½ï¿½Ä»ï¿½Â·ï¿½ï¿½ï¿½à³¬ï¿½ï¿½ï¿½ï¿½ï¿½Æ³ï¿½
     float endY = origin.y - enemy->getContentSize().height * enemy->getScaleY();
     auto moveAction = MoveTo::create(moveTime, Vec2(randomX, endY));
 
-    //µÐ»ú·É³öÆÁÄ»ºó×Ô¶¯ÒÆ³ý±ÜÃâÄÚ´æÐ¹Â©
+    //ï¿½Ð»ï¿½ï¿½É³ï¿½ï¿½ï¿½Ä»ï¿½ï¿½ï¿½Ô¶ï¿½ï¿½Æ³ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ú´ï¿½Ð¹Â©
     auto removeAction = CallFuncN::create(CC_CALLBACK_1(HelloWorld::removeEnemy, this));
     auto sequence = Sequence::create(moveAction, removeAction, nullptr);
     enemy->runAction(sequence);
 
-    //Ìí¼ÓµÐ»úµ½³¡¾°ºÍ¹ÜÀíÈÝÆ÷
-    this->addChild(enemy, 0); // ²ã¼¶0£¬ÔÚ±³¾°Ö®ÉÏ¡¢Ö÷½ÇÖ®ÏÂ
+    //ï¿½ï¿½ï¿½ÓµÐ»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í¹ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+    this->addChild(enemy, 0); // ï¿½ã¼¶0ï¿½ï¿½ï¿½Ú±ï¿½ï¿½ï¿½Ö®ï¿½Ï¡ï¿½ï¿½ï¿½ï¿½ï¿½Ö®ï¿½ï¿½
     _enemies.pushBack(enemy);
 }
 
-//ÒÆ³ýµÐ»ú£¬´Ó³¡¾°ºÍÈÝÆ÷ÖÐÍ¬Ê±É¾³ý
+//ï¿½Æ³ï¿½ï¿½Ð»ï¿½ï¿½ï¿½ï¿½Ó³ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í¬Ê±É¾ï¿½ï¿½
 void HelloWorld::removeEnemy(cocos2d::Node* enemy)
 {
     if (enemy) {
-        // ´Ó³¡¾°ÖÐÒÆ³ý
+        // ï¿½Ó³ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ³ï¿½
         enemy->removeFromParentAndCleanup(true);
-        // ´ÓÈÝÆ÷ÖÐÒÆ³ý
+        // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ³ï¿½
         _enemies.eraseObject(static_cast<Sprite*>(enemy));
     }
 }
