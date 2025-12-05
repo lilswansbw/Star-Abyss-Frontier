@@ -1,7 +1,4 @@
 ﻿C:\Program Files\Microsoft Visual Studio\2022\Community\MSBuild\Current\Bin\amd64\Microsoft.Common.CurrentVersion.targets(2189,5): warning MSB9008: 引用的项目 ..\cocos2d\external\Box2D\proj.win32\libbox2d.vcxproj 不存在。
-  HelloWorldScene.cpp
-AppDelegate.obj : warning LNK4075: 忽略“/EDITANDCONTINUE”(由于“/SAFESEH”规范)
-    正在创建库 D:\work\test\proj.win32\Debug.win32\test.lib 和对象 D:\work\test\proj.win32\Debug.win32\test.exp
   test.vcxproj -> D:\work\test\proj.win32\Debug.win32\test.exe
   正在执行自定义生成步骤
   复制了 0 个文件
