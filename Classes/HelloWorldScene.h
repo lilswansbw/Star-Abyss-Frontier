@@ -3,6 +3,7 @@
 #define __HELLOWORLD_SCENE_H__
 
 #include "cocos2d.h"
+#include "Enemy.h"
 
 class HelloWorld : public cocos2d::Scene
 {
@@ -20,7 +21,7 @@ private:
     cocos2d::Sprite* _bg1;
     cocos2d::Sprite* _bg2;
 
-    cocos2d::Vector<cocos2d::Sprite*> _enemies; // 管理所有敌机的容器
+    cocos2d::Vector<Enemy*> _enemies; // 管理所有敌机的容器
     void createEnemy(float dt); // 创建单个敌机的函数
     void removeEnemy(cocos2d::Node* enemy); // 移除敌机的回调,避免内存泄漏
 };

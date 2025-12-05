@@ -108,35 +108,42 @@ void HelloWorld::createEnemy(float dt)
     Vec2 origin = Director::getInstance()->getVisibleOrigin();
 
     // 创建敌机精灵
-    auto enemy = Sprite::create("Images/Enemy/eplane.png");
+    auto enemy = Enemy::create("Images/Enemy/eplane.png", 1);
 
-    if (enemy) {
-        enemy->setScale(2.0f); // 如果图片太小，放大一点
+    
 
-        // 随机X坐标：确保在屏幕宽度范围内，不超出边界
-        float randomX = origin.x + CCRANDOM_0_1() * (visibleSize.width - enemy->getContentSize().width * enemy->getScaleX());
+    // 随机X坐标：确保在屏幕宽度范围内，不超出边界
+    float enemyWidth = enemy->getContentSize().width * enemy->getScaleX();
+    float enemyHeight = enemy->getContentSize().height * enemy->getScaleY();
 
-        // 初始Y坐标：在屏幕上方一点点，这样看起来是从屏幕外飞进来的
-        float startY = origin.y + visibleSize.height + enemy->getContentSize().height * enemy->getScaleY();
-        enemy->setPosition(Vec2(randomX, startY));
+    // 随机X：保证敌机完全在屏幕内（左右无溢出）
+    float minX = origin.x + enemyWidth / 2;
+    float maxX = origin.x + visibleSize.width - enemyWidth / 2;
+    float randomX = minX + CCRANDOM_0_1() * (maxX - minX);
 
-        // 移动逻辑：随机 2-4 秒飞到底部
-        float moveTime = 2.0f + CCRANDOM_0_1() * 2.0f;
+    // 初始Y：屏幕上方外侧（避免突然出现）
+    float startY = origin.y + visibleSize.height + enemyHeight;
+    enemy->setPosition(Vec2(randomX, startY));
 
-        // 目标Y坐标：屏幕下方看不见的地方
-        float endY = origin.y - enemy->getContentSize().height * enemy->getScaleY();
-        auto moveAction = MoveTo::create(moveTime, Vec2(randomX, endY));
+    // 移动逻辑：随机 2-4 秒飞到底部
+    float moveTime = 2.0f + CCRANDOM_0_1() * 2.0f;
 
-        // 动作序列：先移动，移动结束后执行移除函数（防止内存泄漏）
-        auto removeAction = CallFuncN::create(CC_CALLBACK_1(HelloWorld::removeEnemy, this));
-        auto sequence = Sequence::create(moveAction, removeAction, nullptr);
+    // 目标Y坐标：屏幕下方看不见的地方
+    float endY = origin.y - enemy->getContentSize().height * enemy->getScaleY();
+    auto moveAction = MoveTo::create(moveTime, Vec2(randomX, endY));
 
-        enemy->runAction(sequence);
+    auto removeWhenOut = CallFuncN::create([this](Node* node) {
+        Enemy* enemy = static_cast<Enemy*>(node);
+        if (enemy->isAlive()) {
+            enemy->removeFromParentAndCleanup(true);
+            _enemies.eraseObject(enemy);
+        }
+        });
+    enemy->runAction(Sequence::create(moveAction, removeWhenOut, nullptr));
+    // 添加到场景和容器
+    this->addChild(enemy, 0);
+    _enemies.pushBack(enemy); // 放入 Vector 容器管理（用于之后的碰撞检测）
 
-        // 添加到场景和容器
-        this->addChild(enemy, 0);
-        _enemies.pushBack(enemy); // 放入 Vector 容器管理（用于之后的碰撞检测）
-    }
 }
 
 // 移除敌机：从场景和容器中同时删除
@@ -146,7 +153,7 @@ void HelloWorld::removeEnemy(cocos2d::Node* enemy)
         // 从屏幕上移除
         enemy->removeFromParentAndCleanup(true);
 
-        // 从管理容器中移除 (注意类型转换)
-        _enemies.eraseObject(static_cast<Sprite*>(enemy));
+        // 从管理容器中移除
+        _enemies.eraseObject(static_cast<Enemy*>(enemy));
     }
 }
