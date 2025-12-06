@@ -1,5 +1,6 @@
 #include "HelloWorldScene.h"
-
+#include "audio/include/SimpleAudioEngine.h"
+using namespace CocosDenshion;
 USING_NS_CC;
 
 Scene* HelloWorld::createScene()
@@ -15,6 +16,8 @@ bool HelloWorld::init()
     {
         return false;
     }
+
+    SimpleAudioEngine::getInstance()->playBackgroundMusic("Sound/game_bgm.mp3", true);
 
     auto visibleSize = Director::getInstance()->getVisibleSize();
     Vec2 origin = Director::getInstance()->getVisibleOrigin();
@@ -42,6 +45,9 @@ bool HelloWorld::init()
     if (player) {
         player->setPosition(Vec2(visibleSize.width / 2 + origin.x, visibleSize.height / 4 + origin.y));
         player->setTag(100); // 设置Tag为100，方便以后在触摸移动时获取
+        float targetGameWidth = 100.0f;
+        float currentWidth = player->getContentSize().width;
+        player->setScale(targetGameWidth / currentWidth);
         this->addChild(player, 1); // 层级为1，在背景上面
     }
 
