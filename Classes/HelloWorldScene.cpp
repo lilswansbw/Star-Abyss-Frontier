@@ -57,11 +57,43 @@ bool HelloWorld::init()
     auto touchListener = EventListenerTouchOneByOne::create();
     touchListener->onTouchBegan = [](Touch* touch, Event* event) { return true; };
     touchListener->onTouchMoved = [=](Touch* touch, Event* event) {
-        // 获取主角飞机
+        // 1. 获取主角飞机
         auto target = this->getChildByTag(100);
+
         if (target) {
-            // 让飞机位置跟随手指移动的增量
-            target->setPosition(target->getPosition() + touch->getDelta());
+            // 2. 获取屏幕大小
+            auto winSize = Director::getInstance()->getWinSize();
+
+            // 3. 获取飞机当前的宽高的一半 (用于计算边缘)
+            // getBoundingBox() 会自动算上缩放比例，非常方便
+            float halfWidth = target->getBoundingBox().size.width / 2;
+            float halfHeight = target->getBoundingBox().size.height / 2;
+
+            // 4. 计算原本想去的新位置
+            Vec2 newPos = target->getPosition() + touch->getDelta();
+
+            // 5. 【核心逻辑】限制 X 轴 (左右不飞出去)
+            // 如果小于左边界，就等于左边界
+            if (newPos.x < halfWidth) {
+                newPos.x = halfWidth;
+            }
+            // 如果大于右边界，就等于右边界
+            if (newPos.x > winSize.width - halfWidth) {
+                newPos.x = winSize.width - halfWidth;
+            }
+
+            // 6. 【核心逻辑】限制 Y 轴 (上下不飞出去)
+            // 下边界
+            if (newPos.y < halfHeight) {
+                newPos.y = halfHeight;
+            }
+            // 上边界
+            if (newPos.y > winSize.height - halfHeight) {
+                newPos.y = winSize.height - halfHeight;
+            }
+
+            // 7. 最后才赋值修正后的安全位置
+            target->setPosition(newPos);
         }
         };
     _eventDispatcher->addEventListenerWithSceneGraphPriority(touchListener, this);
@@ -82,18 +114,30 @@ bool HelloWorld::init()
     float scale = std::max(scaleX, scaleY);
 
     _bg1->setScale(scale);
-    this->addChild(_bg1, -1); // 层级 -1，最底层
+    this->addChild(_bg1, -2); // 层级 -1，最底层
 
     // 创建第二张背景（用于轮替滚动）
     _bg2 = Sprite::create("Images/Background/bg.jpg");
     _bg2->setAnchorPoint(Vec2::ZERO);
     _bg2->setScale(scale); // 保持同样的缩放
-
+    _bg2->setFlippedY(true);
     // 关键位置：放在第一张图放大后的头顶上
     // getBoundingBox().size.height 获取的是缩放后的实际高度
     _bg2->setPosition(0, _bg1->getBoundingBox().size.height);
 
-    this->addChild(_bg2, -1);
+    this->addChild(_bg2, -2);
+
+    _stars1 = Sprite::create("Images/Background/stars.png");
+    _stars1->setAnchorPoint(Vec2::ZERO);
+    _stars1->setPosition(0, 0);
+    _stars1->setBlendFunc(BlendFunc::ADDITIVE);
+    this->addChild(_stars1, -1);
+
+    _stars2 = Sprite::create("Images/Background/stars.png");
+    _stars2->setAnchorPoint(Vec2::ZERO);
+    _stars2->setPosition(0, _stars1->getContentSize().height);
+    _stars2->setBlendFunc(BlendFunc::ADDITIVE);
+    this->addChild(_stars2, -1);
 
     // ==========================================
     // 5. 开启定时器
@@ -107,6 +151,44 @@ bool HelloWorld::init()
     return true;
 }
 
+void HelloWorld::update(float dt)
+{
+    // 1. 设置滚动速度 (像素/秒)
+    // 之前的 5.0f 是每帧移动，现在改成 300.0f * dt 是每秒移动 300 像素
+    // 这样无论帧率高低，速度都是均匀的，会非常丝滑
+    float scrollSpeed = 200.0f;
+    float moveAmount = scrollSpeed * dt;
+
+    if (_bg1 && _bg2) {
+        // 2. 移动两张背景
+        _bg1->setPositionY(_bg1->getPositionY() - moveAmount);
+        _bg2->setPositionY(_bg2->getPositionY() - moveAmount);
+
+        // 3. 获取背景高度
+        float bgHeight = _bg1->getBoundingBox().size.height;
+
+        // 4. 循环逻辑（关键修改点！）
+        // 【修改】必须是 <= -bgHeight，表示整张图都跑出去了
+        if (_bg1->getPositionY() <= -bgHeight) {
+            // 【关键】接到另一张图的确切位置上方，消除缝隙
+            _bg1->setPositionY(_bg2->getPositionY() + bgHeight);
+        }
+
+        if (_bg2->getPositionY() <= -bgHeight) {
+            _bg2->setPositionY(_bg1->getPositionY() + bgHeight);
+        }
+    }
+
+    float starSpeed = 400.0f * dt; // 快 (是星云的4倍)
+    if (_stars1 && _stars2) {
+        _stars1->setPositionY(_stars1->getPositionY() - starSpeed);
+        _stars2->setPositionY(_stars2->getPositionY() - starSpeed);
+
+        float h = _stars1->getBoundingBox().size.height;
+        if (_stars1->getPositionY() <= -h) _stars1->setPositionY(_stars2->getPositionY() + h);
+        if (_stars2->getPositionY() <= -h) _stars2->setPositionY(_stars1->getPositionY() + h);
+    }
+}
 // 定时器回调：随机生成敌机 + 移动逻辑
 void HelloWorld::createEnemy(float dt)
 {

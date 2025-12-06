@@ -172,15 +172,17 @@ bool MenuScene::init()
 
             // ¿ØÖÆÒôÀÖÔÝÍ£/»Ö¸´
             if (state) {
-                item->setNormalImage(Sprite::create("Images/Menu/audioOn.png")); // »»Í¼
+                item->setNormalImage(Sprite::create("Images/Menu/audioOn.png")); // »»Í¼¡¢
+                item->setScale(2.0f);
                 SimpleAudioEngine::getInstance()->resumeBackgroundMusic();
             }
             else {
                 item->setNormalImage(Sprite::create("Images/Menu/audioOff.png")); // »»Í¼
+                item->setScale(2.0f);
                 SimpleAudioEngine::getInstance()->pauseBackgroundMusic();
             }
 
-            item->runAction(Sequence::create(ScaleTo::create(0.1f, 1.2f), ScaleTo::create(0.1f, 0.8f), nullptr));
+            item->runAction(Sequence::create(ScaleTo::create(0.1f, 2.4f), ScaleTo::create(0.1f, 2.0f), nullptr));
         }
     );
     settingItem->setScale(2.0f);

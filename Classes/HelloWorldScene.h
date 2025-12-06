@@ -9,9 +9,9 @@ class HelloWorld : public cocos2d::Scene
 {
 public:
     static cocos2d::Scene* createScene();
-
+    virtual void update(float dt);
     virtual bool init();
-    
+
     // a selector callback
     void menuCloseCallback(cocos2d::Ref* pSender);
     
@@ -20,6 +20,9 @@ public:
 private:
     cocos2d::Sprite* _bg1;
     cocos2d::Sprite* _bg2;
+
+    cocos2d::Sprite* _stars1;
+    cocos2d::Sprite* _stars2;
 
     cocos2d::Vector<Enemy*> _enemies; // 管理所有敌机的容器
     void createEnemy(float dt); // 创建单个敌机的函数
