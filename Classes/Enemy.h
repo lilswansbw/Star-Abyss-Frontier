@@ -11,6 +11,8 @@ public:
     //创建敌机参数,敌机图片和初始血量）
     static Enemy* create(const std::string& imgPath, int hp);
 
+    void startMove(float duration, float endY);
+
     // 敌机被击中，减血+判断是否击毁
     void hurt();
 

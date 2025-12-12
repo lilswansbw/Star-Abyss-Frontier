@@ -1,4 +1,3 @@
-
 #ifndef __HELLOWORLD_SCENE_H__
 #define __HELLOWORLD_SCENE_H__
 
@@ -14,7 +13,7 @@ public:
 
     // a selector callback
     void menuCloseCallback(cocos2d::Ref* pSender);
-    
+
     // implement the "static create()" method manually
     CREATE_FUNC(HelloWorld);
 private:
@@ -25,22 +24,22 @@ private:
     cocos2d::Sprite* _stars2;
 
     cocos2d::Sprite* _player;
-    bool _isPlayerDead; // ÅÐ¶ÏÖ÷½Ç¹ÒÃ»¹Ò£¬¹ÒÁË¾Í²»ÄÜ¶¯ÁË
+    bool _isPlayerDead; // ï¿½Ð¶ï¿½ï¿½ï¿½ï¿½Ç¹ï¿½Ã»ï¿½Ò£ï¿½ï¿½ï¿½ï¿½Ë¾Í²ï¿½ï¿½Ü¶ï¿½ï¿½ï¿½
 
-    cocos2d::Vector<Enemy*> _enemies; // ¹ÜÀíËùÓÐµÐ»úµÄÈÝÆ÷
+    cocos2d::Vector<Enemy*> _enemies; // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ÐµÐ»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
-    cocos2d::Vector<cocos2d::Sprite*> _playerBullets; // ´æÎÒ·½×Óµ¯
+    cocos2d::Vector<cocos2d::Sprite*> _playerBullets; // ï¿½ï¿½ï¿½Ò·ï¿½ï¿½Óµï¿½
     cocos2d::Vector<cocos2d::Sprite*> _enemyBullets;
 
-    void createEnemy(float dt); // ´´½¨µ¥¸öµÐ»úµÄº¯Êý
-    void removeEnemy(cocos2d::Node* enemy); // ÒÆ³ýµÐ»úµÄ»Øµ÷,±ÜÃâÄÚ´æÐ¹Â©
+    void createEnemy(float dt); // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ð»ï¿½ï¿½Äºï¿½ï¿½ï¿½
+    void removeEnemy(cocos2d::Node* enemy); // ï¿½Æ³ï¿½ï¿½Ð»ï¿½ï¿½Ä»Øµï¿½,ï¿½ï¿½ï¿½ï¿½ï¿½Ú´ï¿½Ð¹Â©
 
-    void checkCollisions(); // Åö×²¼ì²â
-    void spawnExplosion(cocos2d::Vec2 pos); // ÔÚÖ¸¶¨Î»ÖÃ²¥·Å±¬Õ¨
+    void checkCollisions(); // ï¿½ï¿½×²ï¿½ï¿½ï¿½
+    void spawnExplosion(cocos2d::Vec2 pos); // ï¿½ï¿½Ö¸ï¿½ï¿½Î»ï¿½Ã²ï¿½ï¿½Å±ï¿½Õ¨
     void gameOver();
-    void playerShoot(float dt); // ÎÒ·½Éä»÷
-    void enemyShoot(float dt);  // µÐ·½Éä»÷ (¿ØÖÆËùÓÐµÐÈË¿ª»ð)
-    void removeBullet(cocos2d::Node* bullet); // ×Óµ¯·É³öÆÁÄ»ºóÏú»Ù
+    void playerShoot(float dt); // ï¿½Ò·ï¿½ï¿½ï¿½ï¿½
+    void enemyShoot(float dt);  // ï¿½Ð·ï¿½ï¿½ï¿½ï¿½ (ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ðµï¿½ï¿½Ë¿ï¿½ï¿½ï¿½)
+    void removeBullet(cocos2d::Node* bullet); // ï¿½Óµï¿½ï¿½É³ï¿½ï¿½ï¿½Ä»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
 };
 
