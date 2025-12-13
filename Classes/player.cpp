@@ -74,26 +74,25 @@ void Player::initTouchLogic() {
 }
 
 cocos2d::Sprite* Player::shoot() {
-    // 播放音效
-    SimpleAudioEngine::getInstance()->playEffect("Sound/click_001.ogg");
+    SimpleAudioEngine::getInstance()->playEffect("Sound/click_001.mp3");
 
-    // 创建子弹
     auto bullet = Sprite::create("Images/Bullet/bullet_player.png");
     if (bullet) {
-        // 设置位置 (头顶)
         float startX = this->getPositionX();
         float startY = this->getPositionY() + this->getBoundingBox().size.height / 2;
         bullet->setPosition(startX, startY);
         bullet->setScale(0.8f);
 
-        // 设置动作
+        // [修改] 只需要让他一直往上飞就行了
+        // 飞出屏幕后的销毁工作，交给 HelloWorldScene::checkCollisions 去做
         float flyTime = 1.0f;
         auto visibleSize = Director::getInstance()->getVisibleSize();
-        auto move = MoveTo::create(flyTime, Vec2(startX, visibleSize.height + 100));
-        auto remove = RemoveSelf::create(); // 飞出屏幕自毁
-        bullet->runAction(Sequence::create(move, remove, nullptr));
+        // 飞得远一点，确保肯定能飞出去
+        auto move = MoveTo::create(flyTime, Vec2(startX, visibleSize.height + 200));
+
+        bullet->runAction(move);
     }
-    return bullet; // 返回给 Scene，方便 Scene 放入 Vector 进行碰撞检测
+    return bullet;
 }
 
 void Player::onDeath() {

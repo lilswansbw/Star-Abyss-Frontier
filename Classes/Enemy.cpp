@@ -49,12 +49,25 @@ void Enemy::startMove(float duration, float endY)
 //被击中
 void Enemy::hurt()
 {
-    if (!_isAlive) return; //已击毁则不处理
+    if (!this->isAlive()) return;
 
-    _hp--;
-    if (_hp <= 0) {
-        _isAlive = false;
-        boom(); //触发爆炸效果
+    // 1. 扣血 (基类逻辑)
+    this->takeDamage(1);
+
+    // 2. [新增] 受击反馈动画：瞬间变红，然后变回原色
+    if (this->isAlive()) {
+        // TintTo: 变色 (时间, R, G, B)
+        // 0.1秒变红 (255, 0, 0)
+        auto tintRed = TintTo::create(0.1f, 255, 0, 0);
+        // 0.1秒变回白色 (255, 255, 255) -> 在 Cocos 里白色意味着原图颜色
+        auto tintBack = TintTo::create(0.1f, 255, 255, 255);
+
+        this->runAction(Sequence::create(tintRed, tintBack, nullptr));
+    }
+
+    // 3. 死亡逻辑
+    if (!this->isAlive()) {
+        boom();
     }
 }
 

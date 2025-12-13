@@ -5,20 +5,21 @@
 
 class BaseEntity : public cocos2d::Sprite {
 public:
-    virtual bool init() override; 
+    virtual bool init() override;
 
-    // 核心通用属性
-    CC_SYNTHESIZE(int, _hp, HP); // 自动生成 getHP/setHP
-    CC_SYNTHESIZE(float, _speed, Speed);
-
-    // 通用接口：受伤
+    // 这就是 takeDamage 的定义处
     virtual void takeDamage(int damage);
 
-    // 通用接口：是否存活
     bool isAlive() const { return _hp > 0; }
+    void setHP(int hp) { _hp = hp; }
+    int getHP() const { return _hp; }
+    virtual ~BaseEntity() {}
+    virtual void onDeath() {}
 
-    // 通用接口：死亡处理 
-    virtual void onDeath() = 0;
+protected:
+    int _hp;
+    float _speed;
+    bool _isAlive;
 };
 
 #endif

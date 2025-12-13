@@ -4,6 +4,7 @@ bool BaseEntity::init() {
     if (!Sprite::init()) return false;
     _hp = 1;
     _speed = 0;
+    _isAlive = true; // 【关键】初始化它，否则它是随机值
     return true;
 }
 

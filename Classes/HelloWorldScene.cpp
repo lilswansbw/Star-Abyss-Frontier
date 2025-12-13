@@ -174,33 +174,106 @@ void HelloWorld::createEnemy(float dt)
 // ============================================================
 void HelloWorld::checkCollisions()
 {
-    // 如果主角死了或者还没创建，跳过
+    // 1. 安全检查：如果主角死了或不存在，直接跳过
     if (_isPlayerDead || !_player) return;
 
-    // 强制转换检查状态
-    Player* p = dynamic_cast<Player*>(_player);
-    if (p && !p->isAlive()) return;
+    // 强转一下，方便后面调用 takeDamage
+    Player* player = dynamic_cast<Player*>(_player);
+    if (!player || !player->isAlive()) return;
 
-    // 遍历敌机
+    auto visibleSize = Director::getInstance()->getVisibleSize();
+
+    // =================================================================
+    // 【新增功能】 1. 检测 [敌方子弹] 撞 [主角]
+    // =================================================================
+    for (auto eb_it = _enemyBullets.begin(); eb_it != _enemyBullets.end(); )
+    {
+        Sprite* bullet = *eb_it;
+        bool hitPlayer = false;
+
+        // 优化：先检查子弹是否飞出屏幕（清理垃圾）
+        if (bullet->getPositionY() < -50) {
+            bullet->removeFromParent();
+            eb_it = _enemyBullets.erase(eb_it);
+            continue;
+        }
+
+        // 碰撞判定：为了手感好，主角的碰撞箱稍微缩小一点 (inset)
+        Rect playerRect = player->getBoundingBox();
+        playerRect.origin.x += 15; playerRect.size.width -= 30;
+        playerRect.origin.y += 15; playerRect.size.height -= 30;
+
+        if (bullet->getBoundingBox().intersectsRect(playerRect))
+        {
+            // A. 子弹消失
+            bullet->removeFromParentAndCleanup(true);
+            eb_it = _enemyBullets.erase(eb_it); // 更新迭代器
+            hitPlayer = true;
+
+            // B. 主角扣血 (调用 BaseEntity 的接口)
+            // 这里假设敌方子弹伤害是 1
+            player->takeDamage(1);
+
+            // C. 播放一个小爆炸或者受伤音效
+            // SimpleAudioEngine::getInstance()->playEffect("Sound/hurt.mp3");
+
+            // D. 检查主角是否挂了
+            if (!player->isAlive()) {
+                spawnExplosion(player->getPosition()); // 播放大爆炸
+                player->onDeath(); // 触发死亡逻辑(隐藏自己)
+                _isPlayerDead = true;
+
+                // 1秒后弹出 Game Over
+                this->scheduleOnce([=](float dt) { this->gameOver(); }, 1.0f, "GameOverDelay");
+            }
+        }
+
+        // 如果没撞到，继续检查下一颗子弹
+        if (!hitPlayer) {
+            ++eb_it;
+        }
+
+        // 如果主角死了，直接退出所有检测，节省性能
+        if (_isPlayerDead) return;
+    }
+
+    // =================================================================
+    // 2. 检测 [我方子弹] 撞 [敌机] (你原有的逻辑)
+    // =================================================================
     for (auto e_it = _enemies.begin(); e_it != _enemies.end(); )
     {
         Enemy* enemy = *e_it;
         bool enemyDead = false;
 
-        // 5.1 子弹 vs 敌机
+        // 优化：刚生成的敌机(在屏幕外)不参与碰撞
+        if (enemy->getPositionY() > visibleSize.height) {
+            ++e_it;
+            continue;
+        }
+
+        // 2.1 子弹 vs 敌机
         for (auto b_it = _playerBullets.begin(); b_it != _playerBullets.end(); )
         {
             Sprite* bullet = *b_it;
+
+            // 优化：清理飞出屏幕的我方子弹
+            if (bullet->getPositionY() > visibleSize.height) {
+                bullet->removeFromParent();
+                b_it = _playerBullets.erase(b_it);
+                continue;
+            }
+
             if (bullet->getBoundingBox().intersectsRect(enemy->getBoundingBox()))
             {
                 bullet->removeFromParentAndCleanup(true);
-                b_it = _playerBullets.erase(b_it); // 安全删除子弹
+                b_it = _playerBullets.erase(b_it);
 
-                enemy->hurt(); // 敌机受伤
+                enemy->hurt();
 
                 if (!enemy->isAlive()) {
                     enemyDead = true;
-                    break; // 敌机死，跳出子弹循环
+                    // 这里可以加分 _score += 100;
+                    break;
                 }
             }
             else {
@@ -209,26 +282,25 @@ void HelloWorld::checkCollisions()
         }
 
         if (enemyDead) {
-            e_it = _enemies.erase(e_it); // 从列表移除敌机
+            e_it = _enemies.erase(e_it);
             continue;
         }
 
-        // 5.2 主角 vs 敌机
-        // 使用 inset 缩小碰撞箱，手感更好
-        Rect playerRect = _player->getBoundingBox();
+        // =============================================================
+        // 3. 检测 [主角] 撞 [敌机] (同归于尽)
+        // =============================================================
+        Rect playerRect = player->getBoundingBox();
         playerRect.origin.x += 15; playerRect.size.width -= 30;
         playerRect.origin.y += 15; playerRect.size.height -= 30;
 
         if (playerRect.intersectsRect(enemy->getBoundingBox()))
         {
-            spawnExplosion(_player->getPosition());
-            enemy->hurt();
+            spawnExplosion(player->getPosition());
+            enemy->hurt(); // 敌机也得死
 
-            // 主角死亡逻辑
-            if (p) p->onDeath();
+            player->onDeath();
             _isPlayerDead = true;
 
-            // 1秒后游戏结束
             this->scheduleOnce([=](float dt) { this->gameOver(); }, 1.0f, "GameOverDelay");
 
             e_it = _enemies.erase(e_it);
