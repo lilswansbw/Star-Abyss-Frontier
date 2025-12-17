@@ -20,6 +20,7 @@ bool Enemy::init(const std::string& imgPath, int hp)
         return false;
     }
     _hp = hp;
+    //_maxHP = hp;
     _isAlive = true;
     return true;
 }

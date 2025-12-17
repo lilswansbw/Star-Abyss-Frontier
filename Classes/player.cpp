@@ -25,7 +25,7 @@ bool Player::init() {
     // 设置初始属性
     this->setHP(5);
     this->setTag(100);
-
+    /*_maxHP = 5;*/
     // 统一缩放逻辑
     float targetGameWidth = 100.0f;
     float currentWidth = this->getContentSize().width;

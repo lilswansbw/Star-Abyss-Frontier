@@ -3,6 +3,7 @@
 
 #include "cocos2d.h"
 #include "Enemy.h"
+#include "BossEnemy.h"
 
 class HelloWorld : public cocos2d::Scene
 {
@@ -41,6 +42,11 @@ private:
     void enemyShoot(float dt);  // �з���� (�������е��˿���)
     void removeBullet(cocos2d::Node* bullet); // �ӵ��ɳ���Ļ������
 
+    BossEnemy* _currentBoss;
+    void createBoss(float dt); //生成Boss
+    bool isPositionValid(Vec2 pos, float size); //检查位置是否与小敌机重合
+    bool isPosOverlapWithBoss(Vec2 pos, float size);
+    float getBossSize();
 };
 
 #endif // __HELLOWORLD_SCENE_H__

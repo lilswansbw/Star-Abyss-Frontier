@@ -1,8 +1,9 @@
 #include "HelloWorldScene.h"
-#include "Player.h"  // 确保你已经新建了 Player 类
-#include "Enemy.h"   // 确保你已经新建了 Enemy 类
+#include "Player.h"
+#include "Enemy.h"
 #include "MenuScene.h"
 #include "audio/include/SimpleAudioEngine.h"
+#include "BossEnemy.h"
 
 USING_NS_CC;
 using namespace CocosDenshion;
@@ -88,13 +89,17 @@ bool HelloWorld::init()
     this->scheduleUpdate();
 
     this->schedule(schedule_selector(HelloWorld::playerShoot), 0.2f);
-    this->schedule(schedule_selector(HelloWorld::enemyShoot), 1.5f);
+    this->schedule(schedule_selector(HelloWorld::enemyShoot), 0.5f);
 
     // 监听主角死亡事件 (从 Player 发出的)
     auto deadListener = EventListenerCustom::create("PLAYER_DEAD_EVENT", [=](EventCustom* event) {
         this->gameOver();
         });
     _eventDispatcher->addEventListenerWithSceneGraphPriority(deadListener, this);
+
+    _currentBoss = nullptr;
+    //添加Boss生成调度，初步设定每30秒生成一次
+    this->schedule(schedule_selector(HelloWorld::createBoss), 10.0f);
 
     return true;
 }
@@ -153,10 +158,23 @@ void HelloWorld::createEnemy(float dt)
     float enemyWidth = enemy->getContentSize().width * enemy->getScaleX();
     float minX = origin.x + enemyWidth / 2;
     float maxX = origin.x + visibleSize.width - enemyWidth / 2;
-    float randomX = minX + CCRANDOM_0_1() * (maxX - minX);
-
     float startY = origin.y + visibleSize.height + enemy->getContentSize().height;
-    enemy->setPosition(Vec2(randomX, startY));
+
+    Vec2 enemyPos;
+    bool isPosValid = false;
+    //尝试5次找不与boss重合的位置
+    for (int i = 0; i < 5; i++) {
+        float randomX = minX + CCRANDOM_0_1() * (maxX - minX);
+        enemyPos = Vec2(randomX, startY);
+
+        //检查当前位置是否与boss重合
+        if (!isPosOverlapWithBoss(enemyPos, enemyWidth)) {
+            isPosValid = true;
+            break;
+        }
+    }
+    //如果都重合用最后一次位置
+    enemy->setPosition(enemyPos);
 
     this->addChild(enemy, 0);
     _enemies.pushBack(enemy);
@@ -428,4 +446,89 @@ void HelloWorld::gameOver()
     auto menu = Menu::create(menuItem, NULL);
     menu->setPosition(Vec2::ZERO);
     this->addChild(menu, 101);
+}
+
+//BOSS
+void HelloWorld::createBoss(float dt) {
+    //如果已有boss存活，不再生成新的
+    if (_currentBoss != nullptr && _currentBoss->isAlive())
+        return;
+
+    auto visibleSize = Director::getInstance()->getVisibleSize();
+    Vec2 origin = Director::getInstance()->getVisibleOrigin();
+
+    //创建Boss体积放大2倍，HP更高
+    auto boss = BossEnemy::create("Images/Enemy/boss.png", 15);
+    if (!boss) return;
+
+    //计算Boss碰撞体积
+    float bossSize = boss->getContentSize().width * boss->getScaleX();
+
+    // 直接随机生成boss位置
+    float minX = origin.x + bossSize / 2;
+    float maxX = origin.x + visibleSize.width - bossSize / 2;
+    float randomX = minX + CCRANDOM_0_1() * (maxX - minX);
+    Vec2 bossPos = Vec2(randomX, visibleSize.height + bossSize);
+
+    //只清理与boss位置重合的小敌机
+    Rect bossRect(bossPos.x - bossSize / 2, bossPos.y - bossSize / 2, bossSize, bossSize);
+    for (auto it = _enemies.begin(); it != _enemies.end();) {
+        auto enemy = *it;
+        //只处理小敌机
+        if (dynamic_cast<BossEnemy*>(enemy) == nullptr) {
+            Rect enemyRect = enemy->getBoundingBox();
+            if (bossRect.intersectsRect(enemyRect)) {
+                //与boss重合的小敌机掉血死亡+从场景移除+从数组删除
+                enemy->takeDamage(enemy->getHP());
+                this->removeChild(enemy);
+                it = _enemies.erase(it);
+            }
+            else {
+                it++;
+            }
+        }
+        else {
+            it++;
+        }
+    }
+
+    //放置boss并添加到场景
+    boss->setPosition(bossPos);
+    this->addChild(boss, 0);
+    _enemies.pushBack(boss);
+
+    //标记当前boss，用于后续小敌机位置检查
+    _currentBoss = boss;
+    //绑定boss死亡，死亡后清空指针
+    boss->setOnDeathCallback([this]() {
+        _currentBoss = nullptr; // 无boss时，小敌机无需位置检查
+        });
+
+    //boss移动
+    boss->startMove(8.0f, origin.y + visibleSize.height * 0.7f);
+}
+
+//检查boss位置是否与现有小敌机重合
+bool HelloWorld::isPosOverlapWithBoss(Vec2 pos, float size) {
+    //无boss时，直接返回不重合
+    if (_currentBoss == nullptr || !_currentBoss->isAlive()) {
+        return false;
+    }
+
+    //小敌机的碰撞矩形
+    Rect enemyRect(pos.x - size / 2, pos.y - size / 2, size, size);
+    // boss的碰撞矩形（考虑缩放）
+    float bossSize = getBossSize();
+    Vec2 bossPos = _currentBoss->getPosition();
+    Rect bossRect(bossPos.x - bossSize / 2, bossPos.y - bossSize / 2, bossSize, bossSize);
+
+    //返回是否重合
+    return enemyRect.intersectsRect(bossRect);
+}
+
+//获取当前boss的碰撞尺寸
+float HelloWorld::getBossSize() {
+    if (_currentBoss == nullptr)
+        return 0;
+    return _currentBoss->getContentSize().width * _currentBoss->getScaleX();
 }
