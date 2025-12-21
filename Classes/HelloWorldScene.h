@@ -11,7 +11,7 @@ public:
     static cocos2d::Scene* createScene();
     virtual void update(float dt);
     virtual bool init();
-
+    void addScore(int score);
     // a selector callback
     void menuCloseCallback(cocos2d::Ref* pSender);
 
@@ -25,6 +25,9 @@ private:
     cocos2d::Sprite* _stars2;
 
     cocos2d::Sprite* _player;
+    cocos2d::Label* _scoreLabel;
+    int _score;
+
     bool _isPlayerDead; // �ж����ǹ�û�ң����˾Ͳ��ܶ���
 
     cocos2d::Vector<Enemy*> _enemies; // �������ел�������
@@ -41,6 +44,7 @@ private:
     void playerShoot(float dt); // �ҷ����
     void enemyShoot(float dt);  // �з���� (�������е��˿���)
     void removeBullet(cocos2d::Node* bullet); // �ӵ��ɳ���Ļ������
+    void showFloatingScore(cocos2d::Vec2 pos, int score);
 
     BossEnemy* _currentBoss;
     void createBoss(float dt); //生成Boss

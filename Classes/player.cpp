@@ -11,6 +11,7 @@ bool Player::init() {
     // ==========================================
     // [逻辑搬运] 读取皮肤 + 创建图片
     // ==========================================
+    this->startShoot();
     int skinId = UserDefault::getInstance()->getIntegerForKey("SkinID", 1);
     std::string imgName = StringUtils::format("Images/Player/player_%d.png", skinId);
 
@@ -24,6 +25,7 @@ bool Player::init() {
 
     // 设置初始属性
     this->setHP(5);
+    this->setupHPBar("Images/Effect/hp_bg.png", "Images/Effect/hp_.png", 0.15f);
     this->setTag(100);
     /*_maxHP = 5;*/
     // 统一缩放逻辑
@@ -39,6 +41,17 @@ bool Player::init() {
     this->initTouchLogic();
 
     return true;
+}
+
+void Player::startShoot() {
+    // 【修改】去掉最后的 "shoot_key"，只保留前4个参数
+    // 注意：Cocos2d-x 4.0 建议用 CC_REPEAT_FOREVER 代替 kRepeatForever
+    this->schedule(CC_SCHEDULE_SELECTOR(Player::autoShootLogic), 0.2f, CC_REPEAT_FOREVER, 0.0f);
+}
+
+void Player::stopShoot() {
+    // 【修改】取消时，也要用选择器，不能用字符串
+    this->unschedule(CC_SCHEDULE_SELECTOR(Player::autoShootLogic));
 }
 
 void Player::initTouchLogic() {
@@ -73,6 +86,47 @@ void Player::initTouchLogic() {
     _eventDispatcher->addEventListenerWithSceneGraphPriority(listener, this);
 }
 
+void Player::autoShootLogic(float dt) {
+    // 只有活着才能射击
+    if (!this->isAlive() || _hp <= 0) {
+        return;
+    }
+
+    // 调用你原本写的 shoot() 生成子弹
+    // 注意：如果你原来的 shoot() 只负责创建 Sprite 并返回，
+    // 你可能需要在这里把返回的子弹加到父节点 (Scene) 里，
+    // 或者你原来的 shoot() 已经把自己加进去了。
+
+    // 假设你原来的 shoot() 只是创建并返回 Sprite：
+    auto bullet = this->shoot();
+    if (bullet) {
+        // 如果 bullet 还没加到场景，记得加一下，或者由 shoot 内部处理
+        if (!bullet->getParent()) {
+            this->getParent()->addChild(bullet);
+        }
+        // 如果你需要把子弹加到 Scene 的数组里管理，这里可能需要回调或者事件分发
+        // 但为了简单，先确保能射出来且能停下
+    }
+}
+
+void Player::onDeath() {
+    // 1. 【核按钮】停止所有定时器（包括射击、移动等一切update）
+    // 这比 unschedule("name") 或 stopShoot() 更彻底、更安全
+    this->unscheduleAllCallbacks();
+
+    // 2. 停止所有动作（移动、动画）
+    this->stopAllActions();
+
+    // 3. 确保数据层面已经死了
+    _hp = 0;
+    _isAlive = false;
+
+    // 4. 视觉消失
+    this->setVisible(false);
+
+    // 5. 播放音效等...
+}
+
 cocos2d::Sprite* Player::shoot() {
     SimpleAudioEngine::getInstance()->playEffect("Sound/click_001.mp3");
 
@@ -83,19 +137,9 @@ cocos2d::Sprite* Player::shoot() {
         bullet->setPosition(startX, startY);
         bullet->setScale(0.8f);
 
-        // [修改] 只需要让他一直往上飞就行了
-        // 飞出屏幕后的销毁工作，交给 HelloWorldScene::checkCollisions 去做
-        float flyTime = 1.0f;
         auto visibleSize = Director::getInstance()->getVisibleSize();
-        // 飞得远一点，确保肯定能飞出去
-        auto move = MoveTo::create(flyTime, Vec2(startX, visibleSize.height + 200));
-
+        auto move = MoveTo::create(1.0f, Vec2(startX, visibleSize.height + 200));
         bullet->runAction(move);
     }
     return bullet;
-}
-
-void Player::onDeath() {
-    // 隐藏自己，播放爆炸 (可选)
-    this->setVisible(false);
 }

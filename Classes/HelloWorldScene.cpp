@@ -101,6 +101,25 @@ bool HelloWorld::init()
     //添加Boss生成调度，初步设定每30秒生成一次
     this->schedule(schedule_selector(HelloWorld::createBoss), 10.0f);
 
+    SimpleAudioEngine::getInstance()->setEffectsVolume(0.3f);
+
+    _score = 0;
+    _scoreLabel = Label::createWithTTF("Score: 0", "fonts/Marker Felt.ttf", 24);
+    if (_scoreLabel) {
+        // 3. 设置位置：放在屏幕左上角
+        auto visibleSize = Director::getInstance()->getVisibleSize();
+        auto origin = Director::getInstance()->getVisibleOrigin();
+
+        // X: 左边缘 + 20像素, Y: 顶边缘 - 20像素
+        _scoreLabel->setPosition(Vec2(origin.x + 60, origin.y + visibleSize.height - 30));
+
+        // 设置颜色 (比如黄色更显眼)
+        _scoreLabel->setColor(Color3B::YELLOW);
+
+        // 加到场景里，层级设高一点(100)，保证不被飞机遮住
+        this->addChild(_scoreLabel, 100);
+    }
+
     return true;
 }
 
@@ -202,43 +221,44 @@ void HelloWorld::checkCollisions()
     auto visibleSize = Director::getInstance()->getVisibleSize();
 
     // =================================================================
-    // 【新增功能】 1. 检测 [敌方子弹] 撞 [主角]
+    // 1. 检测 [敌方子弹] 撞 [主角] (保持你原来的逻辑，微调接口)
     // =================================================================
     for (auto eb_it = _enemyBullets.begin(); eb_it != _enemyBullets.end(); )
     {
         Sprite* bullet = *eb_it;
         bool hitPlayer = false;
 
-        // 优化：先检查子弹是否飞出屏幕（清理垃圾）
+        // 优化：清理飞出屏幕的子弹
         if (bullet->getPositionY() < -50) {
             bullet->removeFromParent();
             eb_it = _enemyBullets.erase(eb_it);
             continue;
         }
 
-        // 碰撞判定：为了手感好，主角的碰撞箱稍微缩小一点 (inset)
+        // 碰撞判定：主角判定框缩小 (Inset)
         Rect playerRect = player->getBoundingBox();
         playerRect.origin.x += 15; playerRect.size.width -= 30;
         playerRect.origin.y += 15; playerRect.size.height -= 30;
 
         if (bullet->getBoundingBox().intersectsRect(playerRect))
         {
-            // A. 子弹消失
             bullet->removeFromParentAndCleanup(true);
-            eb_it = _enemyBullets.erase(eb_it); // 更新迭代器
+            eb_it = _enemyBullets.erase(eb_it);
             hitPlayer = true;
 
-            // B. 主角扣血 (调用 BaseEntity 的接口)
-            // 这里假设敌方子弹伤害是 1
+            // 【修改】统一使用 BaseEntity 的 takeDamage 接口
+            // 这样主角扣血时，头顶的血条会自动刷新
             player->takeDamage(1);
 
-            // C. 播放一个小爆炸或者受伤音效
+            // 播放受伤音效 (可选)
             // SimpleAudioEngine::getInstance()->playEffect("Sound/hurt.mp3");
 
-            // D. 检查主角是否挂了
+            // 检查主角是否挂了
             if (!player->isAlive()) {
-                spawnExplosion(player->getPosition()); // 播放大爆炸
-                player->onDeath(); // 触发死亡逻辑(隐藏自己)
+                // 播放大爆炸
+                spawnExplosion(player->getPosition());
+                // 触发死亡逻辑(停止射击、隐藏)
+                player->onDeath();
                 _isPlayerDead = true;
 
                 // 1秒后弹出 Game Over
@@ -246,35 +266,37 @@ void HelloWorld::checkCollisions()
             }
         }
 
-        // 如果没撞到，继续检查下一颗子弹
         if (!hitPlayer) {
             ++eb_it;
         }
 
-        // 如果主角死了，直接退出所有检测，节省性能
+        // 主角死后立刻停止检测
         if (_isPlayerDead) return;
     }
 
     // =================================================================
-    // 2. 检测 [我方子弹] 撞 [敌机] (你原有的逻辑)
+    // 2. 检测 [敌机] 相关逻辑 (整合了子弹碰撞和身体碰撞)
     // =================================================================
     for (auto e_it = _enemies.begin(); e_it != _enemies.end(); )
     {
-        Enemy* enemy = *e_it;
+        // 这里必须用 BaseEntity* 或 Enemy* 接收，以便调用 takeDamage
+        Enemy* enemy = dynamic_cast<Enemy*>(*e_it);
         bool enemyDead = false;
 
         // 优化：刚生成的敌机(在屏幕外)不参与碰撞
-        if (enemy->getPositionY() > visibleSize.height) {
+        if (!enemy || enemy->getPositionY() > visibleSize.height) {
             ++e_it;
             continue;
         }
 
-        // 2.1 子弹 vs 敌机
+        // -----------------------------------------------------------
+        // 2.1 检测 [我方子弹] 撞 [敌机]
+        // -----------------------------------------------------------
         for (auto b_it = _playerBullets.begin(); b_it != _playerBullets.end(); )
         {
             Sprite* bullet = *b_it;
 
-            // 优化：清理飞出屏幕的我方子弹
+            // 清理飞出屏幕的子弹
             if (bullet->getPositionY() > visibleSize.height) {
                 bullet->removeFromParent();
                 b_it = _playerBullets.erase(b_it);
@@ -283,15 +305,48 @@ void HelloWorld::checkCollisions()
 
             if (bullet->getBoundingBox().intersectsRect(enemy->getBoundingBox()))
             {
+                // 子弹消失
                 bullet->removeFromParentAndCleanup(true);
                 b_it = _playerBullets.erase(b_it);
 
-                enemy->hurt();
+                // 【修改】敌人扣血 (触发血条刷新)
+                // 假设主角伤害是 1 (如果你有武器等级，可以传 player->getDamage())
+                enemy->takeDamage(1);
 
+                // 播放击中音效 (可选，类似金属撞击声)
+                // SimpleAudioEngine::getInstance()->playEffect("Sound/hit.mp3");
+
+                // 【重点】敌人死亡逻辑
                 if (!enemy->isAlive()) {
                     enemyDead = true;
-                    // 这里可以加分 _score += 100;
-                    break;
+
+                    // A. 播放爆炸动画
+                    enemy->boom();
+
+                    // B. 【新增】计分系统集成
+                    // 如果是 Boss，加 1000 分；如果是小兵，加 100 分
+                    if (dynamic_cast<BossEnemy*>(enemy)) {
+                        this->addScore(1000);
+                        // 【新增】Boss 死了，飘一个巨大的数字！
+                        this->showFloatingScore(enemy->getPosition(), 1000);
+                    }
+                    else {
+                        this->addScore(100);
+                        // 【新增】小兵死了，飘分
+                        this->showFloatingScore(enemy->getPosition(), 100);
+                    }
+
+                    // C. 【新增】掉落道具 (JTBD: 惊喜感)
+                    // 20% 概率掉落
+                    /* if (CCRANDOM_0_1() < 0.2f) {
+                        // 如果你写好了 Item 类，在这里 create 并 addChild
+                        auto item = Item::createRandom(enemy->getPosition());
+                        this->addChild(item);
+                        _items.pushBack(item);
+                    }
+                    */
+
+                    break; // 敌人死了，不需要再检测其他子弹是否打中它
                 }
             }
             else {
@@ -300,13 +355,14 @@ void HelloWorld::checkCollisions()
         }
 
         if (enemyDead) {
+            // 敌人死了，从数组移除
             e_it = _enemies.erase(e_it);
             continue;
         }
 
-        // =============================================================
-        // 3. 检测 [主角] 撞 [敌机] (同归于尽)
-        // =============================================================
+        // -----------------------------------------------------------
+        // 2.2 检测 [主角] 撞 [敌机] (同归于尽)
+        // -----------------------------------------------------------
         Rect playerRect = player->getBoundingBox();
         playerRect.origin.x += 15; playerRect.size.width -= 30;
         playerRect.origin.y += 15; playerRect.size.height -= 30;
@@ -314,15 +370,21 @@ void HelloWorld::checkCollisions()
         if (playerRect.intersectsRect(enemy->getBoundingBox()))
         {
             spawnExplosion(player->getPosition());
-            enemy->hurt(); // 敌机也得死
 
+            // 敌机直接死 (或者扣巨量血)
+            enemy->takeDamage(1000);
+            if (!enemy->isAlive()) {
+                enemy->boom(); // 播放敌人爆炸
+            }
+
+            // 主角死
             player->onDeath();
             _isPlayerDead = true;
 
             this->scheduleOnce([=](float dt) { this->gameOver(); }, 1.0f, "GameOverDelay");
 
             e_it = _enemies.erase(e_it);
-            break;
+            break; // 主角都没了，不需要检测其他敌人了
         }
         else {
             ++e_it;
@@ -434,6 +496,14 @@ void HelloWorld::gameOver()
     label->setTextColor(Color4B::RED);
     this->addChild(label, 101);
 
+    if (_player) {
+        // 强转成 Player* 指针才能调用子类方法
+        Player* player = dynamic_cast<Player*>(_player);
+        if (player) {
+            player->stopShoot();
+        }
+    }
+
     auto itemLabel = Label::createWithSystemFont("Back to Menu", "Arial", 40);
     auto menuItem = MenuItemLabel::create(itemLabel, [=](Ref* sender) {
         SimpleAudioEngine::getInstance()->stopAllEffects();
@@ -458,7 +528,7 @@ void HelloWorld::createBoss(float dt) {
     Vec2 origin = Director::getInstance()->getVisibleOrigin();
 
     //创建Boss体积放大2倍，HP更高
-    auto boss = BossEnemy::create("Images/Enemy/boss.png", 15);
+    auto boss = BossEnemy::create("Images/Enemy/boss.png", 100);
     if (!boss) return;
 
     //计算Boss碰撞体积
@@ -531,4 +601,74 @@ float HelloWorld::getBossSize() {
     if (_currentBoss == nullptr)
         return 0;
     return _currentBoss->getContentSize().width * _currentBoss->getScaleX();
+}
+
+void HelloWorld::addScore(int value) {
+    _score += value;
+
+    if (_scoreLabel) {
+        // 1. 更新文字
+        _scoreLabel->setString(StringUtils::format("Score: %d", _score));
+
+        // ==========================================
+        // 【新增】Q弹特效：让分数"跳"一下
+        // ==========================================
+
+        // 先停止之前的动作（防止连续得分时动作鬼畜）
+        _scoreLabel->stopAllActions();
+
+        // 恢复原始大小 (假设原始是 SystemFont 可能需要调整 scale)
+        // 如果你 init 里没有设 scale，这里就是 1.0f
+        _scoreLabel->setScale(1.0f);
+
+        // 动作链：瞬间变大到 1.5倍 -> 0.2秒内弹回 1.0倍
+        // EaseBackOut 会让回弹有一个"果冻"一样的物理效果，非常爽
+        auto scaleUp = ScaleTo::create(0.0f, 1.5f);
+        auto scaleDown = ScaleTo::create(0.2f, 1.0f);
+        auto bounce = EaseBackOut::create(scaleDown);
+
+        // 变颜色的闪烁效果 (闪一下金色)
+        auto colorFlash = Sequence::create(
+            TintTo::create(0.05f, Color3B::ORANGE),
+            TintTo::create(0.2f, Color3B::YELLOW), // 假设平时是黄色
+            nullptr
+        );
+
+        // 同时执行缩放和变色
+        _scoreLabel->runAction(Spawn::create(Sequence::create(scaleUp, bounce, nullptr), colorFlash, nullptr));
+    }
+}
+
+void HelloWorld::showFloatingScore(Vec2 pos, int score) {
+    // 1. 创建临时的 Label
+    std::string scoreStr = StringUtils::format("+%d", score);
+    // 用加粗字体或者稍微大一点的字号
+    auto label = Label::createWithTTF(scoreStr, "fonts/Marker Felt.ttf", 30);
+
+    if (label) {
+        // 2. 设在该死去的敌人的位置
+        label->setPosition(pos);
+        label->setColor(Color3B::YELLOW);
+        // 加一点描边，让字在复杂的背景上也能看清
+        label->enableOutline(Color4B::BLACK, 2);
+
+        this->addChild(label, 200); // 层级要最高，盖住所有飞机
+
+        // 3. 动作设计：向上飘 + 变大 + 透明度消失
+        auto moveUp = MoveBy::create(0.8f, Vec2(0, 80)); // 向上飘 80 像素
+        auto scaleBig = ScaleTo::create(0.1f, 1.5f);     // 瞬间变大
+        auto scaleNormal = ScaleTo::create(0.3f, 1.0f);  // 变回原样
+        auto fadeOut = FadeOut::create(0.3f);            // 最后 0.3秒 变透明
+
+        // 组合动作
+        // 前 0.5秒：只是飘 + 变大变小
+        // 后 0.3秒：继续飘 + 变透明
+        auto seq = Sequence::create(
+            Spawn::create(moveUp, Sequence::create(scaleBig, scaleNormal, DelayTime::create(0.2f), fadeOut, nullptr), nullptr),
+            RemoveSelf::create(), // 飘完自己销毁，不占内存
+            nullptr
+        );
+
+        label->runAction(seq);
+    }
 }

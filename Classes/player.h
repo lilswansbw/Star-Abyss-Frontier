@@ -11,12 +11,14 @@ public:
 
     // 只需要对外暴露一个“射击”接口，场景不需要知道子弹长什么样
     cocos2d::Sprite* shoot(); 
-
+    void startShoot();
+    void stopShoot();
     // 主角死亡逻辑
     virtual void onDeath() override;
 
 private:
     void initTouchLogic(); // 内部函数：处理移动
+    void autoShootLogic(float dt);
 };
 
 #endif

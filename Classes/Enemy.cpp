@@ -1,8 +1,8 @@
 #include "Enemy.h"
 #include "cocos2d.h"
-
+#include "audio/include/SimpleAudioEngine.h"
 USING_NS_CC;
-
+using namespace CocosDenshion;
 Enemy* Enemy::create(const std::string& imgPath, int hp)
 {
     Enemy* enemy = new Enemy();

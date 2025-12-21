@@ -6,7 +6,10 @@ class BossEnemy : public Enemy {
 public:
     static BossEnemy* create(const std::string& imgPath, int hp);
     void startMove(float duration, float endY) override; //重写移动实现更慢
-private:
-    bool init(const std::string& imgPath, int hp) override;
+protected: 
+    bool init(const std::string& imgPath, int hp);
+    void moveRandomly();
+    float _speed;
+    bool _isAlive;
 };
 #endif
