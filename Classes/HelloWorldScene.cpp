@@ -4,7 +4,7 @@
 #include "MenuScene.h"
 #include "audio/include/SimpleAudioEngine.h"
 #include "BossEnemy.h"
-
+#include "Item.h"
 USING_NS_CC;
 using namespace CocosDenshion;
 
@@ -131,7 +131,7 @@ void HelloWorld::update(float dt)
 {
     // 每一帧都检查碰撞
     this->checkCollisions();
-
+    this->checkItemCollisions();
     // 背景滚动逻辑
     float scrollSpeed = 200.0f;
     float moveAmount = scrollSpeed * dt;
@@ -164,45 +164,94 @@ void HelloWorld::update(float dt)
 // ============================================================
 // 4. 生成敌人 (使用新的 Enemy 封装逻辑)
 // ============================================================
+// HelloWorldScene.cpp -> createEnemy (威力加强版)
+
+// HelloWorldScene.cpp -> createEnemy (精准修正版)
+
 void HelloWorld::createEnemy(float dt)
 {
     auto visibleSize = Director::getInstance()->getVisibleSize();
     Vec2 origin = Director::getInstance()->getVisibleOrigin();
 
-    // 创建敌机 (假设 Enemy 类已经重构好)
-    auto enemy = Enemy::create("Images/Enemy/eplane.png", 3);
+    Enemy* enemy = nullptr;
+    bool isElite = false;
+    bool needFlip = false;
+
+    // 【新增】用来标记是不是那个看着特别小的旧飞机
+    bool isLegacyPlane = false;
+
+    // 1. 决定类型
+    if (CCRANDOM_0_1() < 0.2f) {
+        // 精英组
+        isElite = true;
+        std::string imgPath = (CCRANDOM_0_1() < 0.5f) ? "Images/Enemy/enemy_red.png" : "Images/Enemy/enemy_green.png";
+        enemy = Enemy::create(imgPath, 10);
+        enemy->setTag(2);
+        needFlip = true;
+    }
+    else {
+        // 普通组
+        std::string imgPath;
+        if (CCRANDOM_0_1() < 0.5f) {
+            imgPath = "Images/Enemy/enemy_white.png";
+            needFlip = true;
+        }
+        else {
+            imgPath = "Images/Enemy/eplane.png";
+            needFlip = false;
+            isLegacyPlane = true; // <--- 标记它！
+        }
+        enemy = Enemy::create(imgPath, 3);
+        enemy->setTag(1);
+    }
+
     if (!enemy) return;
 
-    // 随机位置
-    float enemyWidth = enemy->getContentSize().width * enemy->getScaleX();
-    float minX = origin.x + enemyWidth / 2;
-    float maxX = origin.x + visibleSize.width - enemyWidth / 2;
-    float startY = origin.y + visibleSize.height + enemy->getContentSize().height;
+    // 2. 翻转
+    if (needFlip) {
+        enemy->setFlippedY(true);
+    }
+
+    // 3. 标准化缩放 (大小控制)
+    // 依然使用 120 (或者你觉得合适的大小)
+    const float STANDARD_ENEMY_WIDTH = 120.0f;
+
+    float actualWidth = enemy->getContentSize().width;
+    float baseScale = STANDARD_ENEMY_WIDTH / actualWidth;
+
+    if (isElite) {
+        enemy->setScale(baseScale * 1.1f);
+    }
+    else if (isLegacyPlane) {
+        // =================================================
+        // 【核心修改】如果是 eplane，额外放大 1.5 倍！
+        // =================================================
+        enemy->setScale(baseScale * 1.5f);
+    }
+    else {
+        enemy->setScale(baseScale * 0.95f);
+    }
+
+    // 4. 位置与移动 (保持不变)
+    float scaledEnemyWidth = enemy->getContentSize().width * enemy->getScaleX();
+    float minX = origin.x + scaledEnemyWidth / 2;
+    float maxX = origin.x + visibleSize.width - scaledEnemyWidth / 2;
+    float h = enemy->getContentSize().height * enemy->getScaleY();
+    float startY = origin.y + visibleSize.height + h / 2;
 
     Vec2 enemyPos;
-    bool isPosValid = false;
-    //尝试5次找不与boss重合的位置
     for (int i = 0; i < 5; i++) {
         float randomX = minX + CCRANDOM_0_1() * (maxX - minX);
         enemyPos = Vec2(randomX, startY);
-
-        //检查当前位置是否与boss重合
-        if (!isPosOverlapWithBoss(enemyPos, enemyWidth)) {
-            isPosValid = true;
-            break;
-        }
+        if (!isPosOverlapWithBoss(enemyPos, scaledEnemyWidth)) break;
     }
-    //如果都重合用最后一次位置
     enemy->setPosition(enemyPos);
-
     this->addChild(enemy, 0);
     _enemies.pushBack(enemy);
 
-    // 让敌机开始移动 (调用 Enemy 的接口)
-    float moveTime = 2.0f + CCRANDOM_0_1() * 2.0f;
-    float endY = origin.y - 100;
-
-    // 如果 Enemy 类里没有 startMove，请确保你也更新了 Enemy.h/.cpp
+    float baseTime = isElite ? 3.5f : 2.0f;
+    float moveTime = baseTime + CCRANDOM_0_1() * 1.0f;
+    float endY = origin.y - h;
     enemy->startMove(moveTime, endY);
 }
 
@@ -311,7 +360,15 @@ void HelloWorld::checkCollisions()
 
                 // 【修改】敌人扣血 (触发血条刷新)
                 // 假设主角伤害是 1 (如果你有武器等级，可以传 player->getDamage())
-                enemy->takeDamage(1);
+                int damage = 1;
+                if (_player) {
+                    Player* p = dynamic_cast<Player*>(_player);
+                    if (p) {
+                        // 调用我们在 Player.cpp 里刚写好的函数
+                        damage = p->getDamage();
+                    }
+                }
+                enemy->takeDamage(damage);
 
                 // 播放击中音效 (可选，类似金属撞击声)
                 // SimpleAudioEngine::getInstance()->playEffect("Sound/hit.mp3");
@@ -336,15 +393,22 @@ void HelloWorld::checkCollisions()
                         this->showFloatingScore(enemy->getPosition(), 100);
                     }
 
-                    // C. 【新增】掉落道具 (JTBD: 惊喜感)
-                    // 20% 概率掉落
-                    /* if (CCRANDOM_0_1() < 0.2f) {
-                        // 如果你写好了 Item 类，在这里 create 并 addChild
-                        auto item = Item::createRandom(enemy->getPosition());
-                        this->addChild(item);
+                    if (CCRANDOM_0_1() < 0.5f) {
+                        // 1. 随机创建一个道具
+                        auto item = Item::createRandom();
+
+                        // 2. 位置设在敌人死掉的地方
+                        item->setPosition(enemy->getPosition());
+
+                        // 3. 加到场景里 (Z轴设为 5，保证在背景上面，但在飞机下面)
+                        this->addChild(item, 5);
+
+                        // 4. 让它开始飘落
+                        item->startMove();
+
+                        // 5. 加入数组管理
                         _items.pushBack(item);
                     }
-                    */
 
                     break; // 敌人死了，不需要再检测其他子弹是否打中它
                 }
@@ -415,25 +479,73 @@ void HelloWorld::enemyShoot(float dt)
     if (_isPlayerDead) return;
 
     for (auto enemy : _enemies) {
-        if (CCRANDOM_0_1() < 0.4f) { // 降低点概率
+
+        // 射击频率控制
+        if (CCRANDOM_0_1() > 0.4f) continue;
+
+        // 获取位置
+        float startX = enemy->getPositionX();
+        float startY = enemy->getPositionY() - enemy->getBoundingBox().size.height / 2;
+
+        // ==========================================
+        // 情况 A：如果是精英怪 (Tag == 2) -> 发射散弹
+        // ==========================================
+        if (enemy->getTag() == 2) {
+
+            // 定义三个方向 (左、中、右)
+            float offsets[3] = { -100.0f, 0.0f, 100.0f };
+
+            for (int i = 0; i < 3; i++) {
+                // 使用你新找的 bullet_4.png (双发导弹)
+                auto bullet = Sprite::create("Images/Bullet/bullet_4.png");
+                if (!bullet) continue;
+
+                bullet->setPosition(startX, startY);
+                bullet->setScale(0.6f);
+                bullet->setFlippedY(true); // 导弹头朝下
+
+                // 计算终点
+                float endX = startX + offsets[i];
+                float endY = -50; // 飞到底部
+
+                // 导弹速度
+                auto move = MoveTo::create(2.0f, Vec2(endX, endY));
+
+                // 必须小心移除
+                auto finish = CallFuncN::create([=](Node* node) {
+                    node->removeFromParentAndCleanup(true);
+                    _enemyBullets.eraseObject(static_cast<Sprite*>(node));
+                    });
+
+                bullet->runAction(Sequence::create(move, finish, nullptr));
+
+                this->addChild(bullet, 0);
+                _enemyBullets.pushBack(bullet);
+            }
+
+            // 播放导弹音效 (如果有的话)
+             // SimpleAudioEngine::getInstance()->playEffect("Sound/missile.mp3"); 
+        }
+
+        // ==========================================
+        // 情况 B：如果是普通怪 (Tag == 1) -> 发射普通红球
+        // ==========================================
+        else {
             auto bullet = Sprite::create("Images/Bullet/bullet_enemy.png");
             if (!bullet) continue;
 
-            float startX = enemy->getPositionX();
-            float startY = enemy->getPositionY() - enemy->getBoundingBox().size.height / 2;
             bullet->setPosition(startX, startY);
             bullet->setScale(0.8f);
 
-            float endY = -50;
-            float flyTime = 1.5f;
+            auto move = MoveTo::create(1.5f, Vec2(startX, -50));
 
-            auto move = MoveTo::create(flyTime, Vec2(startX, endY));
-            auto remove = CallFuncN::create([=](Node* node) {
+            auto finish = CallFuncN::create([=](Node* node) {
                 node->removeFromParentAndCleanup(true);
                 _enemyBullets.eraseObject(static_cast<Sprite*>(node));
                 });
 
-            bullet->runAction(Sequence::create(move, remove, nullptr));
+            bullet->runAction(Sequence::create(move, finish, nullptr));
+
             this->addChild(bullet, 0);
             _enemyBullets.pushBack(bullet);
         }
@@ -670,5 +782,64 @@ void HelloWorld::showFloatingScore(Vec2 pos, int score) {
         );
 
         label->runAction(seq);
+    }
+}
+
+void HelloWorld::checkItemCollisions()
+{
+    // 如果主角死了，就别捡东西了
+    if (_isPlayerDead || !_player) return;
+
+    // 强转为 Player* 以便调用 upgradeFirepower
+    Player* player = dynamic_cast<Player*>(_player);
+    if (!player) return;
+
+    // 遍历所有道具
+    for (auto it = _items.begin(); it != _items.end(); )
+    {
+        Item* item = *it;
+
+        // 1. 优化：如果道具已经飞出屏幕（Y < -50），就清理掉
+        if (item->getPositionY() < -50) {
+            item->removeFromParent();
+            it = _items.erase(it);
+            continue;
+        }
+
+        // 2. 碰撞检测：主角撞到了道具
+        if (player->getBoundingBox().intersectsRect(item->getBoundingBox()))
+        {
+            // === 根据类型触发效果 ===
+            switch (item->getType())
+            {
+                case ItemType::HP:
+                    // 加血 (之前在 BaseEntity 写的)
+                    player->heal(1);
+                    break;
+
+                case ItemType::POWER:
+                    // 升级火力 (之前在 Player 写的)
+                    player->upgradeFirepower();
+                    break;
+
+                case ItemType::SKIN:
+                    // 暂时当成“大分”来吃，加 500 分
+                    this->addScore(500);
+                    this->showFloatingScore(player->getPosition(), 500);
+                    break;
+            }
+
+            // === 播放音效 (可选) ===
+            // SimpleAudioEngine::getInstance()->playEffect("Sound/get_item.mp3");
+
+            // === 吃完后销毁道具 ===
+            item->removeFromParent();
+            it = _items.erase(it); // 从数组移除并指向下一个
+        }
+        else
+        {
+            // 没撞到，检查下一个
+            ++it;
+        }
     }
 }

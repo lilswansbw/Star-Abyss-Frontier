@@ -75,27 +75,23 @@ void Enemy::hurt()
 //爆炸动画+销毁
 void Enemy::boom()
 {
-    // 1. 立即停止敌机的移动动作 (防止它一边炸一边飞)
+    // 1. 停止移动
     this->stopAllActions();
 
-    // 2. 加载爆炸大图 (必须确保路径正确)
+    // 2. 加载爆炸资源
     auto texture = Director::getInstance()->getTextureCache()->addImage("Images/Effect/Effect.png");
-
-    // 安全检查：如果图片没找到，直接消失，防止崩溃
     if (!texture) {
         this->removeFromParentAndCleanup(true);
         return;
     }
 
-    // 3. 按照 3x3 的网格切割图片 
+    // 3. 准备动画帧
     int cols = 3;
     int rows = 3;
     float frameWidth = texture->getContentSize().width / cols;
     float frameHeight = texture->getContentSize().height / rows;
 
     auto animation = Animation::create();
-
-    // 遍历切图
     for (int r = 0; r < rows; r++) {
         for (int c = 0; c < cols; c++) {
             auto rect = Rect(c * frameWidth, r * frameHeight, frameWidth, frameHeight);
@@ -103,22 +99,35 @@ void Enemy::boom()
             animation->addSpriteFrame(frame);
         }
     }
+    animation->setDelayPerUnit(0.05f);
+    animation->setRestoreOriginalFrame(false);
 
-    animation->setDelayPerUnit(0.05f); // 播放速度
-    animation->setRestoreOriginalFrame(false); 
+    // =================================================
+    // 【核心修复】重置大小和方向！
+    // =================================================
 
-    // 4. 创建动作序列
+    // A. 解决“爆炸太大”：
+    // 不管飞机之前缩放是 1.5 还是 2.0，爆炸时统一设为 1.2 倍 (你可以根据视觉效果微调)
+    this->setScale(1.2f);
+
+    // B. 解决“爆炸倒立”：
+    // 之前有些飞机被我们 setFlippedY(true) 了，爆炸素材不需要倒过来，所以要复原
+    this->setFlippedY(false);
+
+    // C. 解决“变色”：
+    // 如果之前用 setColor 变红了，爆炸应该是原色的，所以要重置颜色为白色
+    this->setColor(Color3B::WHITE);
+
+    // =================================================
+
+    // 4. 播放动画并销毁
     auto animate = Animate::create(animation);
-
     auto removeSelf = CallFuncN::create([this](Node* node) {
         node->removeFromParentAndCleanup(true);
-        // 如果你的类里有 _isAlive 标记，最好在这里也确认设为 false
-        // this->_isAlive = false; 
+        this->_isAlive = false;
         });
 
-    // 播放音效 (可选，如果希望每架敌机爆炸都有声音)
-    // SimpleAudioEngine::getInstance()->playEffect("Sound/explode.mp3");
+    // 播放音效
 
-    // 5. 执行动作：先变身爆炸，再销毁自己
     this->runAction(Sequence::create(animate, removeSelf, nullptr));
 }

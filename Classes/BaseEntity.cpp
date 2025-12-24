@@ -125,3 +125,26 @@ void BaseEntity::takeDamage(int damage) {
         }
     }
 }
+void BaseEntity::heal(int amount) {
+    // 只有活着才能回血
+    if (!_isAlive) return;
+
+    // 1. 增加血量
+    _hp += amount;
+
+    // 2. 限制上限 (防止溢出)
+    if (_hp > _maxHp) {
+        _hp = _maxHp;
+    }
+
+    // 3. 刷新血条
+    updateHPBar();
+
+    // 4. 【视觉反馈】全身闪一下绿色，表示治疗成功
+    // TintTo 参数：时间, R, G, B
+    auto tintGreen = TintTo::create(0.1f, 0, 255, 0);   // 变绿
+    auto tintBack = TintTo::create(0.1f, 255, 255, 255); // 变回原色
+
+    // 动作序列
+    this->runAction(Sequence::create(tintGreen, tintBack, nullptr));
+}

@@ -27,6 +27,7 @@ bool Player::init() {
     this->setHP(5);
     this->setupHPBar("Images/Effect/hp_bg.png", "Images/Effect/hp_.png", 0.15f);
     this->setTag(100);
+    _weaponLevel = 1;
     /*_maxHP = 5;*/
     // 统一缩放逻辑
     float targetGameWidth = 100.0f;
@@ -128,18 +129,81 @@ void Player::onDeath() {
 }
 
 cocos2d::Sprite* Player::shoot() {
-    SimpleAudioEngine::getInstance()->playEffect("Sound/click_001.mp3");
+    // ==========================================
+    // 1. 准备素材配置 (根据等级选 音效 和 图片)
+    // ==========================================
+    std::string soundFile = "Sound/click_001.mp3"; // 默认音效
+    std::string bulletImg = "Images/Bullet/bullet_player.png"; // 默认子弹
+    float scale = 0.8f;    // 默认大小
+    float flyTime = 1.0f;  // 默认飞行时间
 
-    auto bullet = Sprite::create("Images/Bullet/bullet_player.png");
+    switch (_weaponLevel) {
+        case 2:
+            // 2级：金色子弹，声音变了，飞得快一点
+            soundFile = "Sound/click_002.mp3";
+            bulletImg = "Images/Bullet/bullet_1.png";
+            scale = 0.6f;  // 这种细长子弹不用太大
+            flyTime = 0.8f;
+            break;
+        case 3:
+            // 3级：大范围散射光，声音更猛，速度极快
+            soundFile = "Sound/click_003.mp3";
+            bulletImg = "Images/Bullet/bullet_2.png";
+            scale = 0.5f;  // 这个图本身很大，缩放一下
+            flyTime = 0.6f;
+            break;
+        default:
+            // 默认为1级配置
+            break;
+    }
+
+    // ==========================================
+    // 2. 播放对应的音效
+    // ==========================================
+    SimpleAudioEngine::getInstance()->playEffect(soundFile.c_str());
+
+    // ==========================================
+    // 3. 生成子弹
+    // ==========================================
+    auto bullet = Sprite::create(bulletImg);
+
     if (bullet) {
+        // 设置位置 (从飞机头顶发射)
         float startX = this->getPositionX();
         float startY = this->getPositionY() + this->getBoundingBox().size.height / 2;
         bullet->setPosition(startX, startY);
-        bullet->setScale(0.8f);
+        bullet->setScale(scale);
 
+        // 创建飞行路径
         auto visibleSize = Director::getInstance()->getVisibleSize();
-        auto move = MoveTo::create(1.0f, Vec2(startX, visibleSize.height + 200));
-        bullet->runAction(move);
+        auto move = MoveTo::create(flyTime, Vec2(startX, visibleSize.height + 200));
+        auto remove = RemoveSelf::create();
+
+        // 执行动作
+        bullet->runAction(Sequence::create(move, remove, nullptr));
     }
+
     return bullet;
+}
+
+void Player::upgradeFirepower() {
+    // 等级 +1
+    _weaponLevel++;
+
+    // 限制最高等级 (假设最高 3 级，防止无限变强)
+    if (_weaponLevel > 3) {
+        _weaponLevel = 3;
+        // 如果已经是最高级，可以加分或者回满血作为替代奖励
+        this->heal(5);
+    }
+
+    // 简单的控制台输出，帮你调试
+    cocos2d::log("Player Weapon Upgraded! Current Level: %d", _weaponLevel);
+}
+
+int Player::getDamage() const {
+    // 简单的数值策划
+    // 1级=1点，2级=2点，3级=3点
+    // 如果你想让3级特别猛，可以 return _weaponLevel * 2;
+    return _weaponLevel;
 }

@@ -8,7 +8,7 @@ class BaseEntity : public cocos2d::Sprite {
 public:
     virtual bool init() override;
     virtual void takeDamage(int damage);
-
+    void heal(int amount);
     // 【新增】初始化血条 (子类在 init 时调用这个就能显示血条)
     void setupHPBar(const std::string& bgImg, const std::string& fillImg, float scale = 0.2f);
 

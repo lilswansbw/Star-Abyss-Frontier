@@ -4,7 +4,7 @@
 #include "cocos2d.h"
 #include "Enemy.h"
 #include "BossEnemy.h"
-
+#include "Item.h"
 class HelloWorld : public cocos2d::Scene
 {
 public:
@@ -28,22 +28,24 @@ private:
     cocos2d::Label* _scoreLabel;
     int _score;
 
-    bool _isPlayerDead; // �ж����ǹ�û�ң����˾Ͳ��ܶ���
+    bool _isPlayerDead; 
 
-    cocos2d::Vector<Enemy*> _enemies; // �������ел�������
-
-    cocos2d::Vector<cocos2d::Sprite*> _playerBullets; // ���ҷ��ӵ�
+    cocos2d::Vector<Enemy*> _enemies; 
+    cocos2d::Vector<cocos2d::Sprite*> _playerBullets; 
     cocos2d::Vector<cocos2d::Sprite*> _enemyBullets;
 
-    void createEnemy(float dt); // ���������л��ĺ���
-    void removeEnemy(cocos2d::Node* enemy); // �Ƴ��л��Ļص�,�����ڴ�й©
+    cocos2d::Vector<Item*> _items;
 
-    void checkCollisions(); // ��ײ���
-    void spawnExplosion(cocos2d::Vec2 pos); // ��ָ��λ�ò��ű�ը
+    void checkItemCollisions();
+    void createEnemy(float dt); 
+    void removeEnemy(cocos2d::Node* enemy); 
+
+    void checkCollisions(); 
+    void spawnExplosion(cocos2d::Vec2 pos); 
     void gameOver();
-    void playerShoot(float dt); // �ҷ����
-    void enemyShoot(float dt);  // �з���� (�������е��˿���)
-    void removeBullet(cocos2d::Node* bullet); // �ӵ��ɳ���Ļ������
+    void playerShoot(float dt); 
+    void enemyShoot(float dt);  
+    void removeBullet(cocos2d::Node* bullet); 
     void showFloatingScore(cocos2d::Vec2 pos, int score);
 
     BossEnemy* _currentBoss;
