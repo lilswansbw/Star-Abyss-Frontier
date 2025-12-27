@@ -5,205 +5,268 @@ USING_NS_CC;
 using namespace CocosDenshion;
 
 bool Player::init() {
-    // 1. ³õÊ¼»¯¸¸Àà
-    if (!BaseEntity::init()) return false;
+  // 1. åˆå§‹åŒ–çˆ¶ç±»
+  if (!BaseEntity::init())
+    return false;
 
-    // ==========================================
-    // [Âß¼­°áÔË] ¶ÁÈ¡Æ¤·ô + ´´½¨Í¼Æ¬
-    // ==========================================
-    this->startShoot();
-    int skinId = UserDefault::getInstance()->getIntegerForKey("SkinID", 1);
-    std::string imgName = StringUtils::format("Images/Player/player_%d.png", skinId);
+  // ==========================================
+  // [é€»è¾‘æ¬è¿] è¯»å–çš®è‚¤ + åˆ›å»ºå›¾ç‰‡
+  // ==========================================
+  this->startShoot();
+  int skinId = UserDefault::getInstance()->getIntegerForKey("SkinID", 1);
+  std::string imgName =
+      StringUtils::format("Images/Player/player_%d.png", skinId);
 
-    // ¸ø×Ô¼º(this)ÉèÖÃÌùÍ¼£¬¶ø²»ÊÇ´´½¨ĞÂµÄ Sprite
-    this->initWithFile(imgName);
+  // ç»™è‡ªå·±(this)è®¾ç½®è´´å›¾ï¼Œè€Œä¸æ˜¯åˆ›å»ºæ–°çš„ Sprite
+  this->initWithFile(imgName);
 
-    // Èç¹ûÃ»Í¼µÄ±£µ×Âß¼­
-    if (this->getContentSize().width == 0) {
-        this->initWithFile("Images/Player/player_1.png");
-    }
+  // å¦‚æœæ²¡å›¾çš„ä¿åº•é€»è¾‘
+  if (this->getContentSize().width == 0) {
+    this->initWithFile("Images/Player/player_1.png");
+  }
 
-    // ÉèÖÃ³õÊ¼ÊôĞÔ
-    this->setHP(5);
-    this->setupHPBar("Images/Effect/hp_bg.png", "Images/Effect/hp_.png", 0.15f);
-    this->setTag(100);
-    _weaponLevel = 1;
-    /*_maxHP = 5;*/
-    // Í³Ò»Ëõ·ÅÂß¼­
-    float targetGameWidth = 100.0f;
-    float currentWidth = this->getContentSize().width;
-    if (currentWidth > 0) {
-        this->setScale(targetGameWidth / currentWidth);
-    }
+  // è®¾ç½®åˆå§‹å±æ€§
+  this->setHP(5);
+  this->setupHPBar("Images/Effect/hp_bg.png", "Images/Effect/hp_.png", 0.15f);
+  this->setTag(100);
+  _weaponLevel = 1;
+  /*_maxHP = 5;*/
+  // ç»Ÿä¸€ç¼©æ”¾é€»è¾‘
+  float targetGameWidth = 100.0f;
+  float currentWidth = this->getContentSize().width;
+  if (currentWidth > 0) {
+    this->setScale(targetGameWidth / currentWidth);
+  }
 
-    // ==========================================
-    // [Âß¼­°áÔË] ¿ªÆô´¥Ãş (×Ô¸ø×Ô×ã)
-    // ==========================================
-    this->initTouchLogic();
+  // ==========================================
+  // [é€»è¾‘æ¬è¿] å¼€å¯è§¦æ‘¸ (è‡ªç»™è‡ªè¶³)
+  // ==========================================
+  this->initTouchLogic();
 
-    return true;
+  // åˆå§‹åŒ–æ—¶ç©ºå›æº¯çŠ¶æ€
+  _isRewinding = false;
+
+  return true;
 }
 
 void Player::startShoot() {
-    // ¡¾ĞŞ¸Ä¡¿È¥µô×îºóµÄ "shoot_key"£¬Ö»±£ÁôÇ°4¸ö²ÎÊı
-    // ×¢Òâ£ºCocos2d-x 4.0 ½¨ÒéÓÃ CC_REPEAT_FOREVER ´úÌæ kRepeatForever
-    this->schedule(CC_SCHEDULE_SELECTOR(Player::autoShootLogic), 0.2f, CC_REPEAT_FOREVER, 0.0f);
+  // ã€ä¿®æ”¹ã€‘å»æ‰æœ€åçš„ "shoot_key"ï¼Œåªä¿ç•™å‰4ä¸ªå‚æ•°
+  // æ³¨æ„ï¼šCocos2d-x 4.0 å»ºè®®ç”¨ CC_REPEAT_FOREVER ä»£æ›¿ kRepeatForever
+  this->schedule(CC_SCHEDULE_SELECTOR(Player::autoShootLogic), 0.2f,
+                 CC_REPEAT_FOREVER, 0.0f);
 }
 
 void Player::stopShoot() {
-    // ¡¾ĞŞ¸Ä¡¿È¡ÏûÊ±£¬Ò²ÒªÓÃÑ¡ÔñÆ÷£¬²»ÄÜÓÃ×Ö·û´®
-    this->unschedule(CC_SCHEDULE_SELECTOR(Player::autoShootLogic));
+  // ã€ä¿®æ”¹ã€‘å–æ¶ˆæ—¶ï¼Œä¹Ÿè¦ç”¨é€‰æ‹©å™¨ï¼Œä¸èƒ½ç”¨å­—ç¬¦ä¸²
+  this->unschedule(CC_SCHEDULE_SELECTOR(Player::autoShootLogic));
 }
 
 void Player::initTouchLogic() {
-    auto listener = EventListenerTouchOneByOne::create();
-    listener->setSwallowTouches(true); // ÍÌÊÉ´¥Ãş£¬·ÀÖ¹´©Í¸
+  auto listener = EventListenerTouchOneByOne::create();
+  listener->setSwallowTouches(true); // åå™¬è§¦æ‘¸ï¼Œé˜²æ­¢ç©¿é€
 
-    listener->onTouchBegan = [](Touch* t, Event* e) { return true; };
+  listener->onTouchBegan = [](Touch *t, Event *e) { return true; };
 
-    // [Âß¼­°áÔË] ÒÆ¶¯Óë±ß½çÏŞÖÆ
-    listener->onTouchMoved = [this](Touch* touch, Event* event) {
-        if (!this->isAlive()) return;
+  // [é€»è¾‘æ¬è¿] ç§»åŠ¨ä¸è¾¹ç•Œé™åˆ¶
+  listener->onTouchMoved = [this](Touch *touch, Event *event) {
+    if (!this->isAlive())
+      return;
 
-        auto winSize = Director::getInstance()->getWinSize();
-        // ×¢Òâ£ºÕâÀïÖ±½ÓÓÃ this£¬ÒòÎª´úÂë¾ÍÔÚ·É»úÀàÀï
-        Vec2 newPos = this->getPosition() + touch->getDelta();
+    auto winSize = Director::getInstance()->getWinSize();
+    // æ³¨æ„ï¼šè¿™é‡Œç›´æ¥ç”¨ thisï¼Œå› ä¸ºä»£ç å°±åœ¨é£æœºç±»é‡Œ
+    Vec2 newPos = this->getPosition() + touch->getDelta();
 
-        // ±ß½ç¼ÆËã
-        float halfW = this->getBoundingBox().size.width / 2;
-        float halfH = this->getBoundingBox().size.height / 2;
+    // è¾¹ç•Œè®¡ç®—
+    float halfW = this->getBoundingBox().size.width / 2;
+    float halfH = this->getBoundingBox().size.height / 2;
 
-        // ÏŞÖÆ X
-        if (newPos.x < halfW) newPos.x = halfW;
-        if (newPos.x > winSize.width - halfW) newPos.x = winSize.width - halfW;
+    // é™åˆ¶ X
+    if (newPos.x < halfW)
+      newPos.x = halfW;
+    if (newPos.x > winSize.width - halfW)
+      newPos.x = winSize.width - halfW;
 
-        // ÏŞÖÆ Y
-        if (newPos.y < halfH) newPos.y = halfH;
-        if (newPos.y > winSize.height - halfH) newPos.y = winSize.height - halfH;
+    // é™åˆ¶ Y
+    if (newPos.y < halfH)
+      newPos.y = halfH;
+    if (newPos.y > winSize.height - halfH)
+      newPos.y = winSize.height - halfH;
 
-        this->setPosition(newPos);
-        };
+    this->setPosition(newPos);
+  };
 
-    _eventDispatcher->addEventListenerWithSceneGraphPriority(listener, this);
+  _eventDispatcher->addEventListenerWithSceneGraphPriority(listener, this);
 }
 
 void Player::autoShootLogic(float dt) {
-    // Ö»ÓĞ»î×Å²ÅÄÜÉä»÷
-    if (!this->isAlive() || _hp <= 0) {
-        return;
-    }
+  // åªæœ‰æ´»ç€æ‰èƒ½å°„å‡»
+  if (!this->isAlive() || _hp <= 0) {
+    return;
+  }
 
-    // µ÷ÓÃÄãÔ­±¾Ğ´µÄ shoot() Éú³É×Óµ¯
-    // ×¢Òâ£ºÈç¹ûÄãÔ­À´µÄ shoot() Ö»¸ºÔğ´´½¨ Sprite ²¢·µ»Ø£¬
-    // Äã¿ÉÄÜĞèÒªÔÚÕâÀï°Ñ·µ»ØµÄ×Óµ¯¼Óµ½¸¸½Úµã (Scene) Àï£¬
-    // »òÕßÄãÔ­À´µÄ shoot() ÒÑ¾­°Ñ×Ô¼º¼Ó½øÈ¥ÁË¡£
+  // è°ƒç”¨ä½ åŸæœ¬å†™çš„ shoot() ç”Ÿæˆå­å¼¹
+  // æ³¨æ„ï¼šå¦‚æœä½ åŸæ¥çš„ shoot() åªè´Ÿè´£åˆ›å»º Sprite å¹¶è¿”å›ï¼Œ
+  // ä½ å¯èƒ½éœ€è¦åœ¨è¿™é‡ŒæŠŠè¿”å›çš„å­å¼¹åŠ åˆ°çˆ¶èŠ‚ç‚¹ (Scene) é‡Œï¼Œ
+  // æˆ–è€…ä½ åŸæ¥çš„ shoot() å·²ç»æŠŠè‡ªå·±åŠ è¿›å»äº†ã€‚
 
-    // ¼ÙÉèÄãÔ­À´µÄ shoot() Ö»ÊÇ´´½¨²¢·µ»Ø Sprite£º
-    auto bullet = this->shoot();
-    if (bullet) {
-        // Èç¹û bullet »¹Ã»¼Óµ½³¡¾°£¬¼ÇµÃ¼ÓÒ»ÏÂ£¬»òÕßÓÉ shoot ÄÚ²¿´¦Àí
-        if (!bullet->getParent()) {
-            this->getParent()->addChild(bullet);
-        }
-        // Èç¹ûÄãĞèÒª°Ñ×Óµ¯¼Óµ½ Scene µÄÊı×éÀï¹ÜÀí£¬ÕâÀï¿ÉÄÜĞèÒª»Øµ÷»òÕßÊÂ¼ş·Ö·¢
-        // µ«ÎªÁË¼òµ¥£¬ÏÈÈ·±£ÄÜÉä³öÀ´ÇÒÄÜÍ£ÏÂ
+  // å‡è®¾ä½ åŸæ¥çš„ shoot() åªæ˜¯åˆ›å»ºå¹¶è¿”å› Spriteï¼š
+  auto bullet = this->shoot();
+  if (bullet) {
+    // å¦‚æœ bullet è¿˜æ²¡åŠ åˆ°åœºæ™¯ï¼Œè®°å¾—åŠ ä¸€ä¸‹ï¼Œæˆ–è€…ç”± shoot å†…éƒ¨å¤„ç†
+    if (!bullet->getParent()) {
+      this->getParent()->addChild(bullet);
     }
+    // å¦‚æœä½ éœ€è¦æŠŠå­å¼¹åŠ åˆ° Scene çš„æ•°ç»„é‡Œç®¡ç†ï¼Œè¿™é‡Œå¯èƒ½éœ€è¦å›è°ƒæˆ–è€…äº‹ä»¶åˆ†å‘
+    // ä½†ä¸ºäº†ç®€å•ï¼Œå…ˆç¡®ä¿èƒ½å°„å‡ºæ¥ä¸”èƒ½åœä¸‹
+  }
 }
 
 void Player::onDeath() {
-    // 1. ¡¾ºË°´Å¥¡¿Í£Ö¹ËùÓĞ¶¨Ê±Æ÷£¨°üÀ¨Éä»÷¡¢ÒÆ¶¯µÈÒ»ÇĞupdate£©
-    // Õâ±È unschedule("name") »ò stopShoot() ¸ü³¹µ×¡¢¸ü°²È«
-    this->unscheduleAllCallbacks();
+  // 1. ã€æ ¸æŒ‰é’®ã€‘åœæ­¢æ‰€æœ‰å®šæ—¶å™¨ï¼ˆåŒ…æ‹¬å°„å‡»ã€ç§»åŠ¨ç­‰ä¸€åˆ‡updateï¼‰
+  // è¿™æ¯” unschedule("name") æˆ– stopShoot() æ›´å½»åº•ã€æ›´å®‰å…¨
+  this->unscheduleAllCallbacks();
 
-    // 2. Í£Ö¹ËùÓĞ¶¯×÷£¨ÒÆ¶¯¡¢¶¯»­£©
-    this->stopAllActions();
+  // 2. åœæ­¢æ‰€æœ‰åŠ¨ä½œï¼ˆç§»åŠ¨ã€åŠ¨ç”»ï¼‰
+  this->stopAllActions();
 
-    // 3. È·±£Êı¾İ²ãÃæÒÑ¾­ËÀÁË
-    _hp = 0;
-    _isAlive = false;
+  // 3. ç¡®ä¿æ•°æ®å±‚é¢å·²ç»æ­»äº†
+  _hp = 0;
+  _isAlive = false;
 
-    // 4. ÊÓ¾õÏûÊ§
-    this->setVisible(false);
+  // 4. è§†è§‰æ¶ˆå¤±
+  this->setVisible(false);
 
-    // 5. ²¥·ÅÒôĞ§µÈ...
+  // 5. æ’­æ”¾éŸ³æ•ˆç­‰...
 }
 
-cocos2d::Sprite* Player::shoot() {
-    // ==========================================
-    // 1. ×¼±¸ËØ²ÄÅäÖÃ (¸ù¾İµÈ¼¶Ñ¡ ÒôĞ§ ºÍ Í¼Æ¬)
-    // ==========================================
-    std::string soundFile = "Sound/click_001.mp3"; // Ä¬ÈÏÒôĞ§
-    std::string bulletImg = "Images/Bullet/bullet_player.png"; // Ä¬ÈÏ×Óµ¯
-    float scale = 0.8f;    // Ä¬ÈÏ´óĞ¡
-    float flyTime = 1.0f;  // Ä¬ÈÏ·ÉĞĞÊ±¼ä
+cocos2d::Sprite *Player::shoot() {
+  // ==========================================
+  // 1. å‡†å¤‡ç´ æé…ç½® (æ ¹æ®ç­‰çº§é€‰ éŸ³æ•ˆ å’Œ å›¾ç‰‡)
+  // ==========================================
+  std::string soundFile = "Sound/click_001.mp3";             // é»˜è®¤éŸ³æ•ˆ
+  std::string bulletImg = "Images/Bullet/bullet_player.png"; // é»˜è®¤å­å¼¹
+  float scale = 0.8f;                                        // é»˜è®¤å¤§å°
+  float flyTime = 1.0f;                                      // é»˜è®¤é£è¡Œæ—¶é—´
 
-    switch (_weaponLevel) {
-        case 2:
-            // 2¼¶£º½ğÉ«×Óµ¯£¬ÉùÒô±äÁË£¬·ÉµÃ¿ìÒ»µã
-            soundFile = "Sound/click_002.mp3";
-            bulletImg = "Images/Bullet/bullet_1.png";
-            scale = 0.6f;  // ÕâÖÖÏ¸³¤×Óµ¯²»ÓÃÌ«´ó
-            flyTime = 0.8f;
-            break;
-        case 3:
-            // 3¼¶£º´ó·¶Î§É¢Éä¹â£¬ÉùÒô¸üÃÍ£¬ËÙ¶È¼«¿ì
-            soundFile = "Sound/click_003.mp3";
-            bulletImg = "Images/Bullet/bullet_2.png";
-            scale = 0.5f;  // Õâ¸öÍ¼±¾ÉíºÜ´ó£¬Ëõ·ÅÒ»ÏÂ
-            flyTime = 0.6f;
-            break;
-        default:
-            // Ä¬ÈÏÎª1¼¶ÅäÖÃ
-            break;
-    }
+  switch (_weaponLevel) {
+  case 2:
+    // 2çº§ï¼šé‡‘è‰²å­å¼¹ï¼Œå£°éŸ³å˜äº†ï¼Œé£å¾—å¿«ä¸€ç‚¹
+    soundFile = "Sound/click_002.mp3";
+    bulletImg = "Images/Bullet/bullet_1.png";
+    scale = 0.6f; // è¿™ç§ç»†é•¿å­å¼¹ä¸ç”¨å¤ªå¤§
+    flyTime = 0.8f;
+    break;
+  case 3:
+    // 3çº§ï¼šå¤§èŒƒå›´æ•£å°„å…‰ï¼Œå£°éŸ³æ›´çŒ›ï¼Œé€Ÿåº¦æå¿«
+    soundFile = "Sound/click_003.mp3";
+    bulletImg = "Images/Bullet/bullet_2.png";
+    scale = 0.5f; // è¿™ä¸ªå›¾æœ¬èº«å¾ˆå¤§ï¼Œç¼©æ”¾ä¸€ä¸‹
+    flyTime = 0.6f;
+    break;
+  default:
+    // é»˜è®¤ä¸º1çº§é…ç½®
+    break;
+  }
 
-    // ==========================================
-    // 2. ²¥·Å¶ÔÓ¦µÄÒôĞ§
-    // ==========================================
-    SimpleAudioEngine::getInstance()->playEffect(soundFile.c_str());
+  // ==========================================
+  // 2. æ’­æ”¾å¯¹åº”çš„éŸ³æ•ˆ
+  // ==========================================
+  SimpleAudioEngine::getInstance()->playEffect(soundFile.c_str());
 
-    // ==========================================
-    // 3. Éú³É×Óµ¯
-    // ==========================================
-    auto bullet = Sprite::create(bulletImg);
+  // ==========================================
+  // 3. ç”Ÿæˆå­å¼¹
+  // ==========================================
+  auto bullet = Sprite::create(bulletImg);
 
-    if (bullet) {
-        // ÉèÖÃÎ»ÖÃ (´Ó·É»úÍ·¶¥·¢Éä)
-        float startX = this->getPositionX();
-        float startY = this->getPositionY() + this->getBoundingBox().size.height / 2;
-        bullet->setPosition(startX, startY);
-        bullet->setScale(scale);
+  if (bullet) {
+    // è®¾ç½®ä½ç½® (ä»é£æœºå¤´é¡¶å‘å°„)
+    float startX = this->getPositionX();
+    float startY =
+        this->getPositionY() + this->getBoundingBox().size.height / 2;
+    bullet->setPosition(startX, startY);
+    bullet->setScale(scale);
 
-        // ´´½¨·ÉĞĞÂ·¾¶
-        auto visibleSize = Director::getInstance()->getVisibleSize();
-        auto move = MoveTo::create(flyTime, Vec2(startX, visibleSize.height + 200));
-        auto remove = RemoveSelf::create();
+    // åˆ›å»ºé£è¡Œè·¯å¾„
+    auto visibleSize = Director::getInstance()->getVisibleSize();
+    auto move = MoveTo::create(flyTime, Vec2(startX, visibleSize.height + 200));
+    auto remove = RemoveSelf::create();
 
-        // Ö´ĞĞ¶¯×÷
-        bullet->runAction(Sequence::create(move, remove, nullptr));
-    }
+    // æ‰§è¡ŒåŠ¨ä½œ
+    bullet->runAction(Sequence::create(move, remove, nullptr));
+  }
 
-    return bullet;
+  return bullet;
 }
 
 void Player::upgradeFirepower() {
-    // µÈ¼¶ +1
-    _weaponLevel++;
+  // ç­‰çº§ +1
+  _weaponLevel++;
 
-    // ÏŞÖÆ×î¸ßµÈ¼¶ (¼ÙÉè×î¸ß 3 ¼¶£¬·ÀÖ¹ÎŞÏŞ±äÇ¿)
-    if (_weaponLevel > 3) {
-        _weaponLevel = 3;
-        // Èç¹ûÒÑ¾­ÊÇ×î¸ß¼¶£¬¿ÉÒÔ¼Ó·Ö»òÕß»ØÂúÑª×÷ÎªÌæ´ú½±Àø
-        this->heal(5);
-    }
+  // é™åˆ¶æœ€é«˜ç­‰çº§ (å‡è®¾æœ€é«˜ 3 çº§ï¼Œé˜²æ­¢æ— é™å˜å¼º)
+  if (_weaponLevel > 3) {
+    _weaponLevel = 3;
+    // å¦‚æœå·²ç»æ˜¯æœ€é«˜çº§ï¼Œå¯ä»¥åŠ åˆ†æˆ–è€…å›æ»¡è¡€ä½œä¸ºæ›¿ä»£å¥–åŠ±
+    this->heal(5);
+  }
 
-    // ¼òµ¥µÄ¿ØÖÆÌ¨Êä³ö£¬°ïÄãµ÷ÊÔ
-    cocos2d::log("Player Weapon Upgraded! Current Level: %d", _weaponLevel);
+  // ç®€å•çš„æ§åˆ¶å°è¾“å‡ºï¼Œå¸®ä½ è°ƒè¯•
+  cocos2d::log("Player Weapon Upgraded! Current Level: %d", _weaponLevel);
 }
 
 int Player::getDamage() const {
-    // ¼òµ¥µÄÊıÖµ²ß»®
-    // 1¼¶=1µã£¬2¼¶=2µã£¬3¼¶=3µã
-    // Èç¹ûÄãÏëÈÃ3¼¶ÌØ±ğÃÍ£¬¿ÉÒÔ return _weaponLevel * 2;
-    return _weaponLevel;
+  // ç®€å•çš„æ•°å€¼ç­–åˆ’
+  // 1çº§=1ç‚¹ï¼Œ2çº§=2ç‚¹ï¼Œ3çº§=3ç‚¹
+  // å¦‚æœä½ æƒ³è®©3çº§ç‰¹åˆ«çŒ›ï¼Œå¯ä»¥ return _weaponLevel * 2;
+  return _weaponLevel;
+}
+
+// ==========================================
+// [æ—¶ç©ºå›æº¯] Update å‡½æ•° - çŠ¶æ€è®°å½•ä¸å›æº¯
+// ==========================================
+void Player::update(float dt) {
+  // è°ƒç”¨çˆ¶ç±»update
+  BaseEntity::update(dt);
+
+  if (!this->isAlive())
+    return;
+
+  // æ£€æµ‹Ré”®çŠ¶æ€ï¼ˆé€šè¿‡EventKeyboardç›‘å¬ï¼Œè¿™é‡Œç®€åŒ–å¤„ç†ï¼‰
+  // å®é™…åº”ç”¨ä¸­éœ€è¦åœ¨HelloWorldSceneæˆ–å…¶ä»–åœ°æ–¹ç›‘å¬é”®ç›˜äº‹ä»¶å¹¶è®¾ç½®_isRewinding
+
+  if (!_isRewinding) {
+    // ==========================================
+    // æ­£å¸¸çŠ¶æ€ï¼šè®°å½•å½“å‰å¸§çŠ¶æ€
+    // ==========================================
+    PlayerState state;
+    state.position = this->getPosition();
+    state.hp = _hp;
+    state.timestamp = Director::getInstance()->getTotalFrames() / 60.0f;
+
+    _stateHistory.push_back(state);
+
+    // é™åˆ¶å†å²è®°å½•é•¿åº¦ï¼ˆä¿æŒæœ€è¿‘3ç§’ï¼‰
+    if (_stateHistory.size() > MAX_HISTORY_FRAMES) {
+      _stateHistory.pop_front();
+    }
+  } else {
+    // ==========================================
+    // å›æº¯çŠ¶æ€ï¼šä»å†å²è®°å½•ä¸­æ¢å¤
+    // ==========================================
+    if (!_stateHistory.empty()) {
+      // ä»é˜Ÿå°¾å–å‡ºæœ€è¿‘çš„å†å²çŠ¶æ€
+      PlayerState pastState = _stateHistory.back();
+      _stateHistory.pop_back();
+
+      // åº”ç”¨å†å²çŠ¶æ€
+      this->setPosition(pastState.position);
+      this->setHP(pastState.hp);
+
+      // è§†è§‰åé¦ˆï¼šåŠé€æ˜è¡¨ç¤ºå›æº¯ä¸­
+      this->setOpacity(180);
+    } else {
+      // å†å²è®°å½•ç”¨å®Œäº†ï¼Œåœæ­¢å›æº¯
+      _isRewinding = false;
+      this->setOpacity(255); // æ¢å¤ä¸é€æ˜
+    }
+  }
 }
