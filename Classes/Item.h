@@ -1,34 +1,25 @@
-#ifndef __ITEM_H__
+ï»¿#ifndef __ITEM_H__
 #define __ITEM_H__
 
 #include "cocos2d.h"
 
-// ¶¨ÒåµÀ¾ßÀàĞÍÃ¶¾Ù
+// é“å…·ç±»å‹
 enum class ItemType {
-    HP,     // »ØÑªÒ©Ë®
-    POWER,  // »ğÁ¦Éı¼¶
-    SKIN    // Æ¤·ôËéÆ¬ (»òÕß×÷Îª¸ß·Ö½±Àø)
+  HP,    // å›è¡€
+  POWER, // ç«åŠ›å‡çº§
+  SKIN   // çš®è‚¤/åŠ åˆ†
 };
 
 class Item : public cocos2d::Sprite {
 public:
-    // ¾²Ì¬¹¤³§·½·¨£ºÖ¸¶¨ÀàĞÍ´´½¨
-    static Item* create(ItemType type);
-
-    // ¾²Ì¬¹¤³§·½·¨£ºËæ»ú´´½¨Ò»¸öµÀ¾ß (·½±ãÔÚµôÂäÊ±µ÷ÓÃ)
-    static Item* createRandom();
-
-    // »ñÈ¡µ±Ç°µÀ¾ßÀàĞÍ
-    ItemType getType() const { return _type; }
-
-    // ¿ªÊ¼ÒÆ¶¯ (Æ®ÂäÂß¼­)
-    void startMove();
-
-    // ³õÊ¼»¯
-    virtual bool init(ItemType type);
+  static Item *create(ItemType type);
+  static Item *createRandom();
+  ItemType getType() const { return _type; }
+  void startMove();
+  virtual bool init(ItemType type);
 
 private:
-    ItemType _type;
+  ItemType _type;
 };
 
 #endif

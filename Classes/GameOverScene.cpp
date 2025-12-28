@@ -1,4 +1,4 @@
-#include "GameOverScene.h"
+﻿#include "GameOverScene.h"
 #include "LeaderboardScene.h"
 #include "MenuScene.h"
 #include "audio/include/SimpleAudioEngine.h"

@@ -1,4 +1,4 @@
-#ifndef __LEADERBOARD_SCENE_H__
+﻿#ifndef __LEADERBOARD_SCENE_H__
 #define __LEADERBOARD_SCENE_H__
 
 #include "cocos2d.h"

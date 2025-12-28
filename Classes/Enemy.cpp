@@ -1,133 +1,106 @@
-#include "Enemy.h"
-#include "cocos2d.h"
+ï»¿#include "Enemy.h"
 #include "audio/include/SimpleAudioEngine.h"
+#include "cocos2d.h"
+
 USING_NS_CC;
 using namespace CocosDenshion;
-Enemy* Enemy::create(const std::string& imgPath, int hp)
-{
-    Enemy* enemy = new Enemy();
-    if (enemy && enemy->init(imgPath, hp)) {
-        enemy->autorelease();
-        return enemy;
-    }
-    CC_SAFE_DELETE(enemy);
-    return nullptr;
+
+Enemy *Enemy::create(const std::string &imgPath, int hp) {
+  Enemy *enemy = new Enemy();
+  if (enemy && enemy->init(imgPath, hp)) {
+    enemy->autorelease();
+    return enemy;
+  }
+  CC_SAFE_DELETE(enemy);
+  return nullptr;
 }
 
-bool Enemy::init(const std::string& imgPath, int hp)
-{
-    if (!Sprite::initWithFile(imgPath)) {
-        return false;
-    }
-    _hp = hp;
-    //_maxHP = hp;
-    _isAlive = true;
-    return true;
+bool Enemy::init(const std::string &imgPath, int hp) {
+  if (!Sprite::initWithFile(imgPath)) {
+    return false;
+  }
+  _hp = hp;
+  _isAlive = true;
+  return true;
 }
 
-void Enemy::startMove(float duration, float endY)
-{
-    // »ñÈ¡µ±Ç°Î»ÖÃ (XÖáÒÑ¾­ÔÚ´´½¨Ê±ÉèÖÃºÃÁË)
-    float currentX = this->getPositionX();
+void Enemy::startMove(float duration, float endY) {
+  float currentX = this->getPositionX();
 
-    // 1. ´´½¨ÒÆ¶¯¶¯×÷
-    auto moveAction = cocos2d::MoveTo::create(duration, cocos2d::Vec2(currentX, endY));
+  // ç§»åŠ¨åŠ¨ä½œ
+  auto moveAction =
+      cocos2d::MoveTo::create(duration, cocos2d::Vec2(currentX, endY));
 
-    // 2. ´´½¨ÇåÀí¶¯×÷
-    auto removeWhenOut = cocos2d::CallFuncN::create([this](cocos2d::Node* node) {
-        // Èç¹û·É³öÆÁÄ»»¹Ã»ËÀ£¬¾Í×ÔÎÒÏú»Ù
-        if (this->_isAlive) {
-            this->removeFromParentAndCleanup(true);
-            // ±ê¼ÇËÀÍö£¬ÒÔ±ã Scene ÀïµÄ Vector ÏÂ´ÎÇåÀíÊ±ÄÜÊ¶±ð
-            this->_isAlive = false;
-        }
-        });
+  // å‡ºç•Œç§»é™¤
+  auto removeWhenOut = cocos2d::CallFuncN::create([this](cocos2d::Node *node) {
+    if (this->_isAlive) {
+      this->removeFromParentAndCleanup(true);
+      this->_isAlive = false;
+    }
+  });
 
-    // 3. Ö´ÐÐ¶¯×÷ÐòÁÐ
-    this->runAction(cocos2d::Sequence::create(moveAction, removeWhenOut, nullptr));
+  this->runAction(
+      cocos2d::Sequence::create(moveAction, removeWhenOut, nullptr));
 }
 
-//±»»÷ÖÐ
-void Enemy::hurt()
-{
-    if (!this->isAlive()) return;
+void Enemy::hurt() {
+  if (!this->isAlive())
+    return;
 
-    // 1. ¿ÛÑª (»ùÀàÂß¼­)
-    this->takeDamage(1);
+  this->takeDamage(1);
 
-    // 2. [ÐÂÔö] ÊÜ»÷·´À¡¶¯»­£ºË²¼ä±äºì£¬È»ºó±ä»ØÔ­É«
-    if (this->isAlive()) {
-        // TintTo: ±äÉ« (Ê±¼ä, R, G, B)
-        // 0.1Ãë±äºì (255, 0, 0)
-        auto tintRed = TintTo::create(0.1f, 255, 0, 0);
-        // 0.1Ãë±ä»Ø°×É« (255, 255, 255) -> ÔÚ Cocos Àï°×É«ÒâÎ¶×ÅÔ­Í¼ÑÕÉ«
-        auto tintBack = TintTo::create(0.1f, 255, 255, 255);
+  // å—ä¼¤é—ªçƒ
+  if (this->isAlive()) {
+    auto tintRed = TintTo::create(0.1f, 255, 0, 0);
+    auto tintBack = TintTo::create(0.1f, 255, 255, 255);
+    this->runAction(Sequence::create(tintRed, tintBack, nullptr));
+  }
 
-        this->runAction(Sequence::create(tintRed, tintBack, nullptr));
-    }
-
-    // 3. ËÀÍöÂß¼­
-    if (!this->isAlive()) {
-        boom();
-    }
+  if (!this->isAlive()) {
+    boom();
+  }
 }
 
-//±¬Õ¨¶¯»­+Ïú»Ù
-void Enemy::boom()
-{
-    // 1. Í£Ö¹ÒÆ¶¯
-    this->stopAllActions();
+void Enemy::boom() {
+  this->stopAllActions();
 
-    // 2. ¼ÓÔØ±¬Õ¨×ÊÔ´
-    auto texture = Director::getInstance()->getTextureCache()->addImage("Images/Effect/Effect.png");
-    if (!texture) {
-        this->removeFromParentAndCleanup(true);
-        return;
+  // åŠ è½½çˆ†ç‚¸èµ„æº
+  auto texture = Director::getInstance()->getTextureCache()->addImage(
+      "Images/Effect/Effect.png");
+  if (!texture) {
+    this->removeFromParentAndCleanup(true);
+    return;
+  }
+
+  // å‡†å¤‡åŠ¨ç”»å¸§
+  int cols = 3;
+  int rows = 3;
+  float frameWidth = texture->getContentSize().width / cols;
+  float frameHeight = texture->getContentSize().height / rows;
+
+  auto animation = Animation::create();
+  for (int r = 0; r < rows; r++) {
+    for (int c = 0; c < cols; c++) {
+      auto rect =
+          Rect(c * frameWidth, r * frameHeight, frameWidth, frameHeight);
+      auto frame = SpriteFrame::createWithTexture(texture, rect);
+      animation->addSpriteFrame(frame);
     }
+  }
+  animation->setDelayPerUnit(0.05f);
+  animation->setRestoreOriginalFrame(false);
 
-    // 3. ×¼±¸¶¯»­Ö¡
-    int cols = 3;
-    int rows = 3;
-    float frameWidth = texture->getContentSize().width / cols;
-    float frameHeight = texture->getContentSize().height / rows;
+  // ç»Ÿä¸€çˆ†ç‚¸å¤§å°å’Œæ–¹å‘
+  this->setScale(1.2f);
+  this->setFlippedY(false);
+  this->setColor(Color3B::WHITE);
 
-    auto animation = Animation::create();
-    for (int r = 0; r < rows; r++) {
-        for (int c = 0; c < cols; c++) {
-            auto rect = Rect(c * frameWidth, r * frameHeight, frameWidth, frameHeight);
-            auto frame = SpriteFrame::createWithTexture(texture, rect);
-            animation->addSpriteFrame(frame);
-        }
-    }
-    animation->setDelayPerUnit(0.05f);
-    animation->setRestoreOriginalFrame(false);
+  // æ’­æ”¾åŠ¨ç”»å¹¶ç§»é™¤
+  auto animate = Animate::create(animation);
+  auto removeSelf = CallFuncN::create([this](Node *node) {
+    node->removeFromParentAndCleanup(true);
+    this->_isAlive = false;
+  });
 
-    // =================================================
-    // ¡¾ºËÐÄÐÞ¸´¡¿ÖØÖÃ´óÐ¡ºÍ·½Ïò£¡
-    // =================================================
-
-    // A. ½â¾ö¡°±¬Õ¨Ì«´ó¡±£º
-    // ²»¹Ü·É»úÖ®Ç°Ëõ·ÅÊÇ 1.5 »¹ÊÇ 2.0£¬±¬Õ¨Ê±Í³Ò»ÉèÎª 1.2 ±¶ (Äã¿ÉÒÔ¸ù¾ÝÊÓ¾õÐ§¹ûÎ¢µ÷)
-    this->setScale(1.2f);
-
-    // B. ½â¾ö¡°±¬Õ¨µ¹Á¢¡±£º
-    // Ö®Ç°ÓÐÐ©·É»ú±»ÎÒÃÇ setFlippedY(true) ÁË£¬±¬Õ¨ËØ²Ä²»ÐèÒªµ¹¹ýÀ´£¬ËùÒÔÒª¸´Ô­
-    this->setFlippedY(false);
-
-    // C. ½â¾ö¡°±äÉ«¡±£º
-    // Èç¹ûÖ®Ç°ÓÃ setColor ±äºìÁË£¬±¬Õ¨Ó¦¸ÃÊÇÔ­É«µÄ£¬ËùÒÔÒªÖØÖÃÑÕÉ«Îª°×É«
-    this->setColor(Color3B::WHITE);
-
-    // =================================================
-
-    // 4. ²¥·Å¶¯»­²¢Ïú»Ù
-    auto animate = Animate::create(animation);
-    auto removeSelf = CallFuncN::create([this](Node* node) {
-        node->removeFromParentAndCleanup(true);
-        this->_isAlive = false;
-        });
-
-    // ²¥·ÅÒôÐ§
-
-    this->runAction(Sequence::create(animate, removeSelf, nullptr));
+  this->runAction(Sequence::create(animate, removeSelf, nullptr));
 }

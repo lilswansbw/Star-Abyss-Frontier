@@ -1,150 +1,115 @@
+ï»¿#include "BaseEntity.h"
 #include "cocos2d.h"
-#include "BaseEntity.h"
+
 
 USING_NS_CC;
 
 bool BaseEntity::init() {
-    if (!Sprite::init()) return false;
-    _hp = 1;
-    _speed = 0;
-    _isAlive = true;
-    _maxHp = 1; // Ä¬ÈÏ×î´óÑªÁ¿
-    _hpBar = nullptr; // Ö¸Õë³õÊ¼»¯£¬·À±ÀÀ£
-    _hpBarBg = nullptr;
-    return true;
+  if (!Sprite::init())
+    return false;
+  _hp = 1;
+  _speed = 0;
+  _isAlive = true;
+  _maxHp = 1;
+  _hpBar = nullptr;
+  _hpBarBg = nullptr;
+  return true;
 }
 
-// BaseEntity.cpp
+void BaseEntity::setupHPBar(const std::string &bgImg,
+                            const std::string &fillImg, float scale) {
+  _maxHp = _hp;
+  _originalScale = scale;
 
-void BaseEntity::setupHPBar(const std::string& bgImg, const std::string& fillImg, float scale) {
-    _maxHp = _hp;
+  // åˆ›å»ºèƒŒæ™¯
+  _hpBarBg = Sprite::create(bgImg);
+  if (_hpBarBg) {
+    _hpBarBg->setPosition(this->getContentSize().width / 2,
+                          this->getContentSize().height + 15);
+    _hpBarBg->setScaleX(scale);
+    _hpBarBg->setScaleY(scale);
+    _hpBarBg->setOpacity(180);
+    this->addChild(_hpBarBg, 10);
+  }
 
-    // ¡¾½â¾ö Bug 1¡¿°Ñ´«ÈëµÄ scale ´æÆðÀ´£¬ÒÔºóÃ¿´Î¸üÐÂ¶¼ÓÃÕâ¸ö£¬²»ÒªÓÃËÀÊý×Ö
-    _originalScale = scale;
+  // åˆ›å»ºå‰æ™¯
+  _hpBar = Sprite::create(fillImg);
+  if (_hpBar) {
+    _hpBar->setAnchorPoint(Vec2(0, 0.5f));
 
-    // 1. ´´½¨±³¾°
-    _hpBarBg = Sprite::create(bgImg);
+    // è®¡ç®—å®½åº¦æ¯”ä¾‹
+    float widthRatio = 1.0f;
     if (_hpBarBg) {
-        _hpBarBg->setPosition(this->getContentSize().width / 2, this->getContentSize().height + 15);
-        _hpBarBg->setScaleX(scale);
-        _hpBarBg->setScaleY(scale);
-        _hpBarBg->setOpacity(180);
-        this->addChild(_hpBarBg, 10);
+      float bgWidth = _hpBarBg->getContentSize().width;
+      float barWidth = _hpBar->getContentSize().width;
+      widthRatio = bgWidth / barWidth;
     }
 
-    // 2. ´´½¨Ç°¾° (ºìÌõ)
-    _hpBar = Sprite::create(fillImg);
-    if (_hpBar) {
-        _hpBar->setAnchorPoint(Vec2(0, 0.5f));
-
-        // ¡¾½â¾ö Bug 2¡¿¼ÆËã¿í¶ÈÐÞÕý±ÈÂÊ
-        // Âß¼­£ºÈç¹ûºìÌõÔ­Í¼±È±³¾°Ô­Í¼¿í£¬ÎÒÃÇ¾ÍÒª°ÑºìÌõ¶îÍâËõÐ¡Ò»µã
-        float widthRatio = 1.0f;
-        if (_hpBarBg) {
-            float bgWidth = _hpBarBg->getContentSize().width;
-            float barWidth = _hpBar->getContentSize().width;
-            // Ä¿±ê¿í¶È / Êµ¼Ê¿í¶È
-            widthRatio = bgWidth / barWidth;
-        }
-
-        // ¶ÔÆëÎ»ÖÃ
-        if (_hpBarBg) {
-            float bgRealWidth = _hpBarBg->getContentSize().width * _hpBarBg->getScaleX();
-            float startX = _hpBarBg->getPositionX() - (bgRealWidth / 2);
-            _hpBar->setPosition(startX, _hpBarBg->getPositionY());
-        }
-
-        // ¡¾½â¾ö Bug 2¡¿Ó¦ÓÃÐÞÕý±ÈÂÊ
-        // ×îÖÕËõ·Å = ÓÃ»§Éè¶¨µÄËõ·Å(scale) * Í¼Æ¬¿í¶ÈÐÞÕý(widthRatio)
-        _hpBar->setScaleX(scale * widthRatio);
-        _hpBar->setScaleY(scale); // ¸ß¶ÈÍ¨³£²»ÓÃÐÞ£¬»òÕßÄãÒ²³ËÒÔ¸ß¶È±ÈÂÊ
-        _hpBar->setOpacity(200);
-
-        this->addChild(_hpBar, 11);
+    // è®¾ç½®ä½ç½®
+    if (_hpBarBg) {
+      float bgRealWidth =
+          _hpBarBg->getContentSize().width * _hpBarBg->getScaleX();
+      float startX = _hpBarBg->getPositionX() - (bgRealWidth / 2);
+      _hpBar->setPosition(startX, _hpBarBg->getPositionY());
     }
+
+    _hpBar->setScaleX(scale * widthRatio);
+    _hpBar->setScaleY(scale);
+    _hpBar->setOpacity(200);
+    this->addChild(_hpBar, 11);
+  }
 }
 
 void BaseEntity::updateHPBar() {
-    if (_hpBar && _maxHp > 0) {
-        // ¼ÆËã°Ù·Ö±È
-        float percent = (float)_hp / (float)_maxHp;
+  if (_hpBar && _maxHp > 0) {
+    float percent = (float)_hp / (float)_maxHp;
+    if (percent < 0)
+      percent = 0;
+    if (percent > 1)
+      percent = 1;
 
-        // ¡¾½â¾ö Bug 1¡¿·ÀÖ¹ÑªÁ¿±ä³É¸ºÊýµ¼ÖÂÑªÌõ·´Ïò·­×ª
-        if (percent < 0) percent = 0;
-        if (percent > 1) percent = 1;
-
-        // ¡¾½â¾ö Bug 2¡¿¸üÐÂÊ±Ò²Òª´øÉÏ¿í¶È±ÈÂÊ
-        // ÎªÁË¼òµ¥£¬ÎÒÃÇÖØÐÂËãÒ»ÏÂ¿í¶È±ÈÂÊ (»òÕßÄãÔÚÍ·ÎÄ¼þÔÙ´æÒ»¸ö _widthRatio ±äÁ¿»á¸ü¸ßÐ§)
-        // µ«ÕâÀïÎªÁË²»¸ÄÍ·ÎÄ¼þ£¬ÎÒÃÇÔÙËãÒ»´Î
-        float widthRatio = 1.0f;
-        if (_hpBarBg) {
-            widthRatio = _hpBarBg->getContentSize().width / _hpBar->getContentSize().width;
-        }
-
-        // ¡¾½â¾ö Bug 1¡¿Ê¹ÓÃ _originalScale ¶ø²»ÊÇÐ´ËÀµÄ 0.5
-        _hpBar->setScaleX(_originalScale * widthRatio * percent);
+    float widthRatio = 1.0f;
+    if (_hpBarBg) {
+      widthRatio =
+          _hpBarBg->getContentSize().width / _hpBar->getContentSize().width;
     }
+    _hpBar->setScaleX(_originalScale * widthRatio * percent);
+  }
 }
-
-// BaseEntity.cpp
 
 void BaseEntity::takeDamage(int damage) {
-    if (_hp > 0) {
-        _hp -= damage;
-
-        // 1. Ë¢ÐÂÑªÌõ (Ö®Ç°µÄÂß¼­)
-        updateHPBar();
-
-        // ==========================================
-        // ¡¾ÐÂÔö¡¿ÊÜÉËÊÓ¾õ·´À¡£ºË²¼ä±äºì£¬È»ºó»Ö¸´
-        // ==========================================
-        // ÏÈÍ£Ö¹Ö®Ç°µÄ±äÉ«¶¯×÷£¨·ÀÖ¹Á¬Ðø°¤´òÊ±ÑÕÉ«¿¨×¡£©
-        this->stopActionByTag(110);
-
-        // ¶¯×÷ÐòÁÐ£º0.1Ãë±äºì -> 0.1Ãë±ä»Ø°×É«
-        auto flash = Sequence::create(
-            TintTo::create(0.1f, Color3B::RED),
-            TintTo::create(0.1f, Color3B::WHITE),
-            nullptr
-        );
-
-        // ¸ø¶¯×÷Éè¸ö Tag£¬·½±ãÉÏÃæ stopActionByTag ÕÒµ½Ëü
-        flash->setTag(110);
-        this->runAction(flash);
-
-        // ==========================================
-
-        if (_hp <= 0) {
-            _hp = 0;
-            _isAlive = false;
-
-            // È·±£ËÀµÄÊ±ºòÑÕÉ«ÊÇÕý³£µÄ°×É«£¬±ðËÀ³ÉºìÉ«µÄÁË
-            this->setColor(Color3B::WHITE);
-
-            onDeath();
-        }
-    }
-}
-void BaseEntity::heal(int amount) {
-    // Ö»ÓÐ»î×Å²ÅÄÜ»ØÑª
-    if (!_isAlive) return;
-
-    // 1. Ôö¼ÓÑªÁ¿
-    _hp += amount;
-
-    // 2. ÏÞÖÆÉÏÏÞ (·ÀÖ¹Òç³ö)
-    if (_hp > _maxHp) {
-        _hp = _maxHp;
-    }
-
-    // 3. Ë¢ÐÂÑªÌõ
+  if (_hp > 0) {
+    _hp -= damage;
     updateHPBar();
 
-    // 4. ¡¾ÊÓ¾õ·´À¡¡¿È«ÉíÉÁÒ»ÏÂÂÌÉ«£¬±íÊ¾ÖÎÁÆ³É¹¦
-    // TintTo ²ÎÊý£ºÊ±¼ä, R, G, B
-    auto tintGreen = TintTo::create(0.1f, 0, 255, 0);   // ±äÂÌ
-    auto tintBack = TintTo::create(0.1f, 255, 255, 255); // ±ä»ØÔ­É«
+    // å—ä¼¤é—ªçƒæ•ˆæžœ
+    this->stopActionByTag(110);
+    auto flash =
+        Sequence::create(TintTo::create(0.1f, Color3B::RED),
+                         TintTo::create(0.1f, Color3B::WHITE), nullptr);
+    flash->setTag(110);
+    this->runAction(flash);
 
-    // ¶¯×÷ÐòÁÐ
-    this->runAction(Sequence::create(tintGreen, tintBack, nullptr));
+    if (_hp <= 0) {
+      _hp = 0;
+      _isAlive = false;
+      this->setColor(Color3B::WHITE);
+      onDeath();
+    }
+  }
+}
+
+void BaseEntity::heal(int amount) {
+  if (!_isAlive)
+    return;
+  _hp += amount;
+  if (_hp > _maxHp) {
+    _hp = _maxHp;
+  }
+  updateHPBar();
+
+  // æ²»ç–—é—ªçƒæ•ˆæžœ
+  auto tintGreen = TintTo::create(0.1f, 0, 255, 0);
+  auto tintBack = TintTo::create(0.1f, 255, 255, 255);
+  this->runAction(Sequence::create(tintGreen, tintBack, nullptr));
 }

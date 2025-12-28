@@ -1,93 +1,65 @@
-#include "BossEnemy.h"
+ï»¿#include "BossEnemy.h"
 
-BossEnemy* BossEnemy::create(const std::string& imgPath, int hp) {
-    BossEnemy* enemy = new BossEnemy();
-    if (enemy && enemy->init(imgPath, hp)) {
-        enemy->autorelease();
-        return enemy;
-    }
-    CC_SAFE_DELETE(enemy);
-    return nullptr;
+BossEnemy *BossEnemy::create(const std::string &imgPath, int hp) {
+  BossEnemy *enemy = new BossEnemy();
+  if (enemy && enemy->init(imgPath, hp)) {
+    enemy->autorelease();
+    return enemy;
+  }
+  CC_SAFE_DELETE(enemy);
+  return nullptr;
 }
 
-bool BossEnemy::init(const std::string& imgPath, int hp) {
-    // µ÷ÓÃ¸¸Àà³õÊ¼»¯
-    if (!Enemy::init(imgPath, hp)) return false;
-
-    this->setScale(2.0f); // ±ä´ó
-
-    this->setupHPBar("Images/Effect/hp_bg.png", "Images/Effect/hp_.png", 0.4f);
-
-    return true;
+bool BossEnemy::init(const std::string &imgPath, int hp) {
+  if (!Enemy::init(imgPath, hp))
+    return false;
+  this->setScale(2.0f);
+  this->setupHPBar("Images/Effect/hp_bg.png", "Images/Effect/hp_.png", 0.4f);
+  return true;
 }
 
 void BossEnemy::startMove(float duration, float endY) {
-    // 1. »ñÈ¡µ±Ç°Î»ÖÃ
-    float currentX = this->getPositionX();
+  float currentX = this->getPositionX();
 
-    // 2. Èë³¡¶¯×÷£º´ÓÆÁÄ»Íâ·Éµ½³õÊ¼Î»ÖÃ (endY)
-    auto moveEnter = MoveTo::create(duration, Vec2(currentX, endY));
+  // å…¥åœºåŠ¨ç”»
+  auto moveEnter = MoveTo::create(duration, Vec2(currentX, endY));
 
-    // 3. ¡¾¹Ø¼ü¡¿Èë³¡½áÊøºó£¬Ö´ÐÐ moveRandomly º¯Êý¿ªÆôÎÞÏÞÑ²Âß
-    auto startPatrol = CallFunc::create([this]() {
-        this->moveRandomly();
-        });
+  // å…¥åœºåŽå¼€å§‹å·¡é€»
+  auto startPatrol = CallFunc::create([this]() { this->moveRandomly(); });
 
-    // 4. Ö´ÐÐÐòÁÐ
-    auto seq = Sequence::create(moveEnter, startPatrol, nullptr);
-    this->runAction(seq);
+  auto seq = Sequence::create(moveEnter, startPatrol, nullptr);
+  this->runAction(seq);
 }
 
 void BossEnemy::moveRandomly() {
-    // Èç¹û Boss ËÀÁË£¬¾ÍÍ£Ö¹ÒÆ¶¯£¨ËäÈ»¶ÔÏó¿ÉÄÜ»¹Ã»Ïú»Ù£¬µ«Âß¼­ÉÏÒªÍ££©
-    // ×¢Òâ£ºÐèÒªÔÚ BaseEntity ¼ÓÒ»¸ö isAlive() ÅÐ¶Ï£¬»òÕßÖ±½ÓÅÐ¶ÏÖ¸Õë°²È«
-    // ÕâÀïÎªÁË¼òµ¥Ö±½ÓÅÜÂß¼­
+  auto visibleSize = Director::getInstance()->getVisibleSize();
 
-    auto visibleSize = Director::getInstance()->getVisibleSize();
+  // å®šä¹‰ Boss æ´»åŠ¨èŒƒå›´
+  float margin = 50.0f;
+  float minX = margin;
+  float maxX = visibleSize.width - margin;
+  float minY = visibleSize.height * 0.5f;
+  float maxY = visibleSize.height * 0.9f;
 
-    // ==========================================
-    // [Ëã·¨ºËÐÄ] ¼ÆËãËæ»úÒÆ¶¯µÄÄ¿±êµã (±ß½çÏÞÖÆ)
-    // ==========================================
+  // éšæœºç›®æ ‡ç‚¹
+  float randomX = minX + CCRANDOM_0_1() * (maxX - minX);
+  float randomY = minY + CCRANDOM_0_1() * (maxY - minY);
+  Vec2 targetPos = Vec2(randomX, randomY);
 
-    // 1. ¶¨Òå Boss µÄ»î¶¯·¶Î§ (ÆÁÄ»ÉÏ°ë²¿·Ö)
-    // ±ÈÈç£ºXÖáÔÚÆÁÄ»ÄÚ£¬YÖáÔÚÆÁÄ»¸ß¶ÈµÄ 50% ~ 90% Ö®¼ä
-    float margin = 50.0f; // Áôµã±ß¾à£¬±ðÌù×ÅÇ½
-    float minX = margin;
-    float maxX = visibleSize.width - margin;
-    float minY = visibleSize.height * 0.5f; // ×îµÍ·Éµ½ÆÁÄ»ÖÐ¼ä
-    float maxY = visibleSize.height * 0.9f; // ×î¸ß·Éµ½ÆÁÄ»¶¥²¿¸½½ü
+  // è®¡ç®—ç§»åŠ¨æ—¶é—´
+  float distance = this->getPosition().distance(targetPos);
+  float speed = 100.0f;
+  float duration = distance / speed;
 
-    // 2. Éú³ÉËæ»ú×ø±ê
-    float randomX = minX + CCRANDOM_0_1() * (maxX - minX);
-    float randomY = minY + CCRANDOM_0_1() * (maxY - minY);
-    Vec2 targetPos = Vec2(randomX, randomY);
+  // ç§»åŠ¨ -> åœé¡¿ -> ä¸‹ä¸€æ¬¡ç§»åŠ¨
+  auto move = MoveTo::create(duration, targetPos);
+  auto easeMove = EaseSineInOut::create(move);
 
-    // 3. ¼ÆËãÒÆ¶¯ËÙ¶È
-    // ÎªÁËÈÃÒÆ¶¯¿´ÆðÀ´×ÔÈ»£¬ËÙ¶ÈÓ¦¸ÃÊÇºã¶¨µÄ£¬¶ø²»ÊÇÊ±¼äºã¶¨
-    // ¾àÀë = (Ä¿±êµã - µ±Ç°µã) µÄ³¤¶È
-    float distance = this->getPosition().distance(targetPos);
-    float speed = 100.0f; // Ã¿ÃëÒÆ¶¯ 100 ÏñËØ (ÊýÖµÔ½Ð¡Ô½Âý£¬¿´ÆðÀ´Ô½³ÁÖØ)
-    float duration = distance / speed;
+  float waitTime = 0.5f + CCRANDOM_0_1() * 1.0f;
+  auto delay = DelayTime::create(waitTime);
 
-    // ==========================================
-    // [¶¯×÷Á´] ÒÆ¶¯ -> Í£¶ÙÒ»Ð¡»á -> ÔÙÕÒÏÂÒ»¸öµã (µÝ¹é)
-    // ==========================================
+  auto nextMove = CallFunc::create([this]() { this->moveRandomly(); });
 
-    auto move = MoveTo::create(duration, targetPos);
-
-    // ÉÔÎ¢´øÒ»µã»º¶¯Ð§¹û£¬ÈÃ Boss ¿´ÆðÀ´ÓÐ¹ßÐÔ (EaseSineInOut)
-    auto easeMove = EaseSineInOut::create(move);
-
-    // µ½ÁËÐÂÎ»ÖÃºó£¬·¢´ô 0.5 ~ 1.5 Ãë£¬ÔÙ½øÐÐÏÂÒ»´ÎÒÆ¶¯
-    float waitTime = 0.5f + CCRANDOM_0_1() * 1.0f;
-    auto delay = DelayTime::create(waitTime);
-
-    // ¡¾µÝ¹éºËÐÄ¡¿¶¯×÷×öÍêºó£¬ÔÙ´Îµ÷ÓÃ moveRandomly
-    auto nextMove = CallFunc::create([this]() {
-        this->moveRandomly();
-        });
-
-    // Ö´ÐÐÐòÁÐ
-    auto seq = Sequence::create(easeMove, delay, nextMove, nullptr);
-    this->runAction(seq);
+  auto seq = Sequence::create(easeMove, delay, nextMove, nullptr);
+  this->runAction(seq);
 }

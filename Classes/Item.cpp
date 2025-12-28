@@ -1,75 +1,69 @@
-#include "Item.h"
+ï»¿#include "Item.h"
 
 USING_NS_CC;
 
-Item* Item::create(ItemType type) {
-    Item* item = new Item();
-    if (item && item->init(type)) {
-        item->autorelease();
-        return item;
-    }
-    CC_SAFE_DELETE(item);
-    return nullptr;
+Item *Item::create(ItemType type) {
+  Item *item = new Item();
+  if (item && item->init(type)) {
+    item->autorelease();
+    return item;
+  }
+  CC_SAFE_DELETE(item);
+  return nullptr;
 }
 
-Item* Item::createRandom() {
-    // ¼òµ¥µÄËæ»úÂß¼­£º33%¸ÅÂÊ
-    float r = CCRANDOM_0_1();
-    if (r < 0.25f) {
-        return create(ItemType::HP);
-    }
-    // 0.25 ~ 0.85 (60%): µô»ðÁ¦Éý¼¶ (Õâ²ÅÊÇÍæ¼ÒÏëÒªµÄË¬¸Ð£¡)
-    else if (r < 0.85f) {
-        return create(ItemType::POWER);
-    }
-    // Ê£ÏÂµÄ (15%): µôÆ¤·ô/¼Ó·Ö
-    else {
-        return create(ItemType::SKIN);
-    }
+Item *Item::createRandom() {
+  // 25% å›žè¡€ï¼Œ60% ç«åŠ›ï¼Œ15% çš®è‚¤
+  float r = CCRANDOM_0_1();
+  if (r < 0.25f) {
+    return create(ItemType::HP);
+  } else if (r < 0.85f) {
+    return create(ItemType::POWER);
+  } else {
+    return create(ItemType::SKIN);
+  }
 }
 
 bool Item::init(ItemType type) {
-    _type = type;
-    std::string imgPath;
+  _type = type;
+  std::string imgPath;
 
-    switch (type) {
-        case ItemType::HP:    imgPath = "Images/Item/item_hp.png"; break;
-        case ItemType::POWER: imgPath = "Images/Item/item_power.png"; break;
-        case ItemType::SKIN:  imgPath = "Images/Item/item_skin.png"; break;
-        default: return false;
-    }
+  switch (type) {
+  case ItemType::HP:
+    imgPath = "Images/Item/item_hp.png";
+    break;
+  case ItemType::POWER:
+    imgPath = "Images/Item/item_power.png";
+    break;
+  case ItemType::SKIN:
+    imgPath = "Images/Item/item_skin.png";
+    break;
+  default:
+    return false;
+  }
 
-    if (!Sprite::initWithFile(imgPath)) return false;
+  if (!Sprite::initWithFile(imgPath))
+    return false;
 
-    // 1. »ù´¡´óÐ¡ (±£³Ö 0.5£¬Èç¹ûÄã¾õµÃ»¹ÊÇÕûÌåÆ«´ó£¬¿ÉÒÔ¸Ä 0.4)
-    float baseScale = 0.2f;
-    this->setScale(baseScale);
+  // ç¼©æ”¾ä¸Žå‘¼å¸åŠ¨ç”»
+  float baseScale = 0.2f;
+  this->setScale(baseScale);
 
-    // ==========================================
-    // ¡¾ÐÞ¸ÄºËÐÄ¡¿¼õÐ¡ºôÎü·ù¶È
-    // ==========================================
-    // Ö®Ç°ÊÇ +/- 0.1 (·ù¶ÈÌ«´ó)
-    // ÏÖÔÚ¸ÄÎª +/- 0.03 (·Ç³£ÇáÎ¢µÄ¸¡¶¯£¬Ö»ÎªÁËÌáÊ¾ËüÊÇ»îµÄ)
-    float delta = 0.03f;
+  float delta = 0.03f;
+  auto scaleBig = ScaleTo::create(0.6f, baseScale + delta);
+  auto scaleSmall = ScaleTo::create(0.6f, baseScale - delta);
+  this->runAction(
+      RepeatForever::create(Sequence::create(scaleBig, scaleSmall, nullptr)));
 
-    auto scaleBig = ScaleTo::create(0.6f, baseScale + delta); // Ê±¼äÉÔÎ¢À­³¤µ½ 0.6s ¸üÈáºÍ
-    auto scaleSmall = ScaleTo::create(0.6f, baseScale - delta);
-
-    this->runAction(RepeatForever::create(Sequence::create(scaleBig, scaleSmall, nullptr)));
-
-    return true;
+  return true;
 }
 
 void Item::startMove() {
-    // ¼òµ¥µÄÏòÏÂÆ®ÂäÂß¼­
-    auto visibleSize = Director::getInstance()->getVisibleSize();
+  auto visibleSize = Director::getInstance()->getVisibleSize();
 
-    // ÒÆ¶¯µ½µ×²¿Ö®ÏÂ
-    float duration = 4.0f; // Æ®ÂýÒ»µã£¬¸øÍæ¼Ò·´Ó¦Ê±¼ä
-    auto move = MoveTo::create(duration, Vec2(this->getPositionX(), -100));
-
-    // ·É³öÆÁÄ»ºó×ÔÎÒÏú»Ù
-    auto remove = RemoveSelf::create();
-
-    this->runAction(Sequence::create(move, remove, nullptr));
-}   
+  // å‘ä¸‹é£˜è½
+  float duration = 4.0f;
+  auto move = MoveTo::create(duration, Vec2(this->getPositionX(), -100));
+  auto remove = RemoveSelf::create();
+  this->runAction(Sequence::create(move, remove, nullptr));
+}

@@ -1,25 +1,21 @@
-#ifndef Enemy_H
+ï»¿#ifndef Enemy_H
 #define Enemy_H
 #include "BaseEntity.h"
 #include "cocos2d.h"
 
 USING_NS_CC;
 
-class Enemy : public BaseEntity
-{
+class Enemy : public BaseEntity {
 public:
-    //´´½¨µĞ»ú²ÎÊı,µĞ»úÍ¼Æ¬ºÍ³õÊ¼ÑªÁ¿£©
-    static Enemy* create(const std::string& imgPath, int hp);
-    void boom();
-    virtual void startMove(float duration, float endY);
-
-    // µĞ»ú±»»÷ÖĞ£¬¼õÑª+ÅĞ¶ÏÊÇ·ñ»÷»Ù
-    void hurt();
-
- 
+  // å·¥å‚æ–¹æ³•ï¼Œä¼ å…¥å›¾ç‰‡å’Œè¡€é‡
+  static Enemy *create(const std::string &imgPath, int hp);
+  void boom();
+  virtual void startMove(float duration, float endY);
+  // å—ä¼¤å¤„ç†
+  void hurt();
 
 protected:
-    virtual bool init(const std::string& imgPath, int hp); //³õÊ¼»¯,Ğ´ÎªĞéº¯Êı±ãÓÚºóĞøÖØĞ´
+  virtual bool init(const std::string &imgPath, int hp);
 };
 
 #endif // Enemy_H

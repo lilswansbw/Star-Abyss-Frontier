@@ -1,4 +1,4 @@
-#ifndef __BASE_ENTITY_H__
+ï»¿#ifndef __BASE_ENTITY_H__
 #define __BASE_ENTITY_H__
 
 #include "cocos2d.h"
@@ -6,35 +6,39 @@
 
 class BaseEntity : public cocos2d::Sprite {
 public:
-    virtual bool init() override;
-    virtual void takeDamage(int damage);
-    void heal(int amount);
-    // ¡¾ĞÂÔö¡¿³õÊ¼»¯ÑªÌõ (×ÓÀàÔÚ init Ê±µ÷ÓÃÕâ¸ö¾ÍÄÜÏÔÊ¾ÑªÌõ)
-    void setupHPBar(const std::string& bgImg, const std::string& fillImg, float scale = 0.2f);
+  virtual bool init() override;
+  virtual void takeDamage(int damage);
+  void heal(int amount);
 
-    // ¡¾ĞÂÔö¡¿¸üĞÂÑªÌõ (ÄÚ²¿µ÷ÓÃ£¬ÎŞĞè¶ÔÍâ±©Â¶£¬µ«ÎªÁË¼òµ¥ÏÈ·Åpublic)
-    void updateHPBar();
+  // åˆå§‹åŒ–è¡€æ¡
+  void setupHPBar(const std::string &bgImg, const std::string &fillImg,
+                  float scale = 0.2f);
+  // æ›´æ–°è¡€æ¡
+  void updateHPBar();
 
-    // ... (ÄãÔ­ÓĞµÄ»Øµ÷ºÍGetSet±£³Ö²»±ä) ...
-    typedef std::function<void()> OnDeathCallback;
-    void setOnDeathCallback(const OnDeathCallback& callback) { _onDeathCallback = callback; }
-    bool isAlive() const { return _hp > 0; }
-    void setHP(int hp) { _hp = hp; }
-    int getHP() const { return _hp; }
-    virtual ~BaseEntity() {}
-    virtual void onDeath() { if (_onDeathCallback) _onDeathCallback(); }
+  typedef std::function<void()> OnDeathCallback;
+  void setOnDeathCallback(const OnDeathCallback &callback) {
+    _onDeathCallback = callback;
+  }
+  bool isAlive() const { return _hp > 0; }
+  void setHP(int hp) { _hp = hp; }
+  int getHP() const { return _hp; }
+  virtual ~BaseEntity() {}
+  virtual void onDeath() {
+    if (_onDeathCallback)
+      _onDeathCallback();
+  }
 
 protected:
-    int _hp;
-    float _speed;
-    bool _isAlive;
-    float _originalScale; 
-    OnDeathCallback _onDeathCallback;
+  int _hp;
+  float _speed;
+  bool _isAlive;
+  float _originalScale;
+  OnDeathCallback _onDeathCallback;
 
-    // ¡¾¹Ø¼ü¡¿È¡Ïû×¢ÊÍ£¬²¢°Ñ _maxHP ÓÃÆğÀ´
-    cocos2d::Sprite* _hpBar;    // Ç°¾° (ÂÌÌõ/ºìÌõ)
-    cocos2d::Sprite* _hpBarBg;  // ±³¾° (ºÚµ×)
-    int _maxHp;                 // ¼ÇÂ¼×î´óÑªÁ¿£¬ÓÃÓÚ¼ÆËã°Ù·Ö±È
+  cocos2d::Sprite *_hpBar;   // è¡€æ¡å‰æ™¯
+  cocos2d::Sprite *_hpBarBg; // è¡€æ¡èƒŒæ™¯
+  int _maxHp;                // æœ€å¤§è¡€é‡
 };
 
 #endif
