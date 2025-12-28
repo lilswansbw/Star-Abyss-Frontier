@@ -1,272 +1,312 @@
 #include "MenuScene.h"
-#include "HelloWorldScene.h" 
+#include "HelloWorldScene.h"
 #include "audio/include/SimpleAudioEngine.h"
 
 USING_NS_CC;
 using namespace cocos2d::ui;
-using namespace CocosDenshion; // ÒýÓÃÒôÆµÃüÃû¿Õ¼ä
+using namespace CocosDenshion; // å¼•ç”¨éŸ³é¢‘å‘½åç©ºé—´
 
-Scene* MenuScene::createScene()
-{
-    return MenuScene::create();
-}
+Scene *MenuScene::createScene() { return MenuScene::create(); }
 
-bool MenuScene::init()
-{
-    if (!Scene::init()) return false;
+bool MenuScene::init() {
+  if (!Scene::init())
+    return false;
 
-    SimpleAudioEngine::getInstance()->preloadEffect("Sound/click_001.ogg");
-    SimpleAudioEngine::getInstance()->preloadEffect("Sound/launch.ogg");
+  SimpleAudioEngine::getInstance()->preloadEffect("Sound/click_001.ogg");
+  SimpleAudioEngine::getInstance()->preloadEffect("Sound/launch.ogg");
 
-    // ²¥·Å²Ëµ¥Ñ­»·±³¾°ÒôÀÖ
-    if (!SimpleAudioEngine::getInstance()->isBackgroundMusicPlaying()) {
-        SimpleAudioEngine::getInstance()->playBackgroundMusic("Sound/menu_bgm.mp3", true);
+  // æ’­æ”¾èœå•å¾ªçŽ¯èƒŒæ™¯éŸ³ä¹
+  if (!SimpleAudioEngine::getInstance()->isBackgroundMusicPlaying()) {
+    SimpleAudioEngine::getInstance()->playBackgroundMusic("Sound/menu_bgm.mp3",
+                                                          true);
+  }
+  SimpleAudioEngine::getInstance()->setBackgroundMusicVolume(0.1f);
+  SimpleAudioEngine::getInstance()->setEffectsVolume(1.0f);
+
+  auto visibleSize = Director::getInstance()->getVisibleSize();
+  Vec2 origin = Director::getInstance()->getVisibleOrigin();
+
+  // --------------------------------------------------------
+  // 1. èƒŒæ™¯åŠ¨ç”»
+  // --------------------------------------------------------
+  auto bg = Sprite::create("Images/Menu/ezgif-frame-001.jpg");
+  if (bg) {
+    float scaleX = visibleSize.width / bg->getContentSize().width;
+    float scaleY = visibleSize.height / bg->getContentSize().height;
+    bg->setScale(std::max(scaleX, scaleY));
+    bg->setPosition(visibleSize.width / 2, visibleSize.height / 2);
+    this->addChild(bg, -1);
+
+    auto animation = Animation::create();
+    for (int i = 1; i <= 180; i++) {
+      std::string name =
+          StringUtils::format("Images/Menu/ezgif-frame-%03d.jpg", i);
+      animation->addSpriteFrameWithFile(name);
     }
-    SimpleAudioEngine::getInstance()->setBackgroundMusicVolume(0.1f);
-    SimpleAudioEngine::getInstance()->setEffectsVolume(1.0f);
+    animation->setDelayPerUnit(0.05f);
+    animation->setRestoreOriginalFrame(true);
 
-    auto visibleSize = Director::getInstance()->getVisibleSize();
-    Vec2 origin = Director::getInstance()->getVisibleOrigin();
+    auto animate = Animate::create(animation);
+    bg->runAction(RepeatForever::create(animate));
+  } else {
+    CCLOG("Error: Menu background image not found!");
+  }
 
-    // --------------------------------------------------------
-    // 1. ±³¾°¶¯»­
-    // --------------------------------------------------------
-    auto bg = Sprite::create("Images/Menu/ezgif-frame-001.jpg");
-    if (bg) {
-        float scaleX = visibleSize.width / bg->getContentSize().width;
-        float scaleY = visibleSize.height / bg->getContentSize().height;
-        bg->setScale(std::max(scaleX, scaleY));
-        bg->setPosition(visibleSize.width / 2, visibleSize.height / 2);
-        this->addChild(bg, -1);
+  // --------------------------------------------------------
+  // 2. æ ‡é¢˜
+  // --------------------------------------------------------
+  auto title = Label::createWithTTF(
+      "Star Abyss Frontier", "fonts/Nabla-Regular-VariableFont_EDPT,EHLT.ttf",
+      64);
+  if (!title)
+    title = Label::createWithSystemFont("Star Abyss Frontier", "Arial", 64);
 
-        auto animation = Animation::create();
-        for (int i = 1; i <= 180; i++) {
-            std::string name = StringUtils::format("Images/Menu/ezgif-frame-%03d.jpg", i);
-            animation->addSpriteFrameWithFile(name);
+  title->setTextColor(Color4B(0, 255, 255, 255));
+  title->enableShadow(Color4B(0, 200, 255, 255), Size(0, 0), 20);
+  title->enableOutline(Color4B::BLACK, 2);
+
+  if (title->getTTFConfig().fontFilePath != "") {
+    title->enableGlow(Color4B(0, 200, 255, 255));
+  }
+  title->setPosition(visibleSize.width / 2, visibleSize.height * 0.7);
+  this->addChild(title, 1);
+
+  // --------------------------------------------------------
+  // 3. ä¸»èœå•æŒ‰é’®
+  // --------------------------------------------------------
+  auto startLabel = Label::createWithTTF(
+      "START GAME", "fonts/PermanentMarker-Regular.ttf", 48);
+  if (!startLabel)
+    startLabel = Label::createWithSystemFont("START GAME", "Arial", 48);
+
+  auto startItem = MenuItemLabel::create(startLabel, [=](Ref *sender) {
+    SimpleAudioEngine::getInstance()->playEffect("Sound/click_001.mp3");
+    this->menuStartCallback(sender);
+  });
+
+  startItem->setColor(Color3B::YELLOW);
+  startItem->runAction(RepeatForever::create(Sequence::create(
+      ScaleTo::create(1.0f, 1.1f), ScaleTo::create(1.0f, 1.0f), nullptr)));
+
+  auto exitLabel = Label::createWithTTF(
+      "EXIT GAME", "fonts/PermanentMarker-Regular.ttf", 48);
+  if (!exitLabel)
+    exitLabel = Label::createWithSystemFont("EXIT GAME", "Arial", 48);
+
+  // ç‚¹å‡»é€€å‡ºï¼šæ’­æ”¾éŸ³æ•ˆ -> æ‰§è¡Œå›žè°ƒ
+  auto exitItem = MenuItemLabel::create(exitLabel, [=](Ref *sender) {
+    SimpleAudioEngine::getInstance()->playEffect("Sound/click_001.mp3");
+    this->menuExitCallback(sender);
+  });
+  exitItem->setColor(Color3B::RED);
+
+  _mainMenu = Menu::create(startItem, exitItem, NULL);
+  _mainMenu->alignItemsVerticallyWithPadding(60);
+  _mainMenu->setPosition(visibleSize.width / 2, visibleSize.height * 0.4);
+  this->addChild(_mainMenu, 1);
+
+  // --------------------------------------------------------
+  // 4. è£…é¥°é£žæœº (æ¢è‚¤)
+  // --------------------------------------------------------
+  int savedSkin = UserDefault::getInstance()->getIntegerForKey("SkinID", 1);
+  std::string savedName =
+      StringUtils::format("Images/Player/player_%d.png", savedSkin);
+  auto decorShip = Sprite::create(savedName);
+  if (!decorShip)
+    decorShip = Sprite::create("Images/Player/myplane.png");
+
+  if (decorShip) {
+    decorShip->setPosition(visibleSize.width * 0.15, visibleSize.height * 0.20);
+
+    // ç»Ÿä¸€ç¼©æ”¾é€»è¾‘
+    float targetWidth = 120.0f;
+    float currentWidth = decorShip->getContentSize().width;
+    decorShip->setScale(targetWidth / currentWidth);
+
+    this->addChild(decorShip, 1);
+
+    auto moveUp = MoveBy::create(1.5f, Vec2(0, 15));
+    auto moveDown = moveUp->reverse();
+    decorShip->runAction(
+        RepeatForever::create(Sequence::create(moveUp, moveDown, nullptr)));
+
+    auto shipListener = EventListenerTouchOneByOne::create();
+    shipListener->setSwallowTouches(true);
+    shipListener->onTouchBegan = [decorShip](Touch *touch, Event *event) {
+      Vec2 p = decorShip->convertToNodeSpace(touch->getLocation());
+      Rect rect = Rect(0, 0, decorShip->getContentSize().width,
+                       decorShip->getContentSize().height);
+
+      if (rect.containsPoint(p)) {
+        // ç‚¹å‡»éŸ³æ•ˆ
+        SimpleAudioEngine::getInstance()->playEffect("Sound/click_001.ogg");
+
+        int currentSkin =
+            UserDefault::getInstance()->getIntegerForKey("SkinID", 1);
+        currentSkin++;
+        if (currentSkin > 3)
+          currentSkin = 1;
+
+        UserDefault::getInstance()->setIntegerForKey("SkinID", currentSkin);
+        UserDefault::getInstance()->flush();
+
+        std::string nextName =
+            StringUtils::format("Images/Player/player_%d.png", currentSkin);
+        if (FileUtils::getInstance()->isFileExist(nextName)) {
+          decorShip->setTexture(nextName);
+          // æ¢å›¾åŽé‡ç½®ç¼©æ”¾
+          float targetW = 120.0f;
+          float newW = decorShip->getContentSize().width;
+          decorShip->setScale(targetW / newW);
         }
-        animation->setDelayPerUnit(0.05f);
-        animation->setRestoreOriginalFrame(true);
+        decorShip->runAction(RotateBy::create(0.5f, 360));
+        return true;
+      }
+      return false;
+    };
+    _eventDispatcher->addEventListenerWithSceneGraphPriority(shipListener,
+                                                             decorShip);
+  }
 
-        auto animate = Animate::create(animation);
-        bg->runAction(RepeatForever::create(animate));
-    }
-    else {
-        CCLOG("Error: Menu background image not found!");
-    }
+  // --------------------------------------------------------
+  // 5. è®¾ç½®æŒ‰é’® (æŽ§åˆ¶éŸ³ä¹å¼€å…³)
+  // --------------------------------------------------------
+  bool isAudioOn = UserDefault::getInstance()->getBoolForKey("AudioOn", true);
+  std::string btnImg =
+      isAudioOn ? "Images/Menu/audioOn.png" : "Images/Menu/audioOff.png";
+  auto settingItem = MenuItemImage::create(btnImg, btnImg, [=](Ref *sender) {
+    auto item = static_cast<MenuItemImage *>(sender);
+    bool state = !UserDefault::getInstance()->getBoolForKey("AudioOn", true);
+    UserDefault::getInstance()->setBoolForKey("AudioOn", state);
+    UserDefault::getInstance()->flush();
 
-    // --------------------------------------------------------
-    // 2. ±êÌâ
-    // --------------------------------------------------------
-    auto title = Label::createWithTTF("Star Abyss Frontier", "fonts/Nabla-Regular-VariableFont_EDPT,EHLT.ttf", 64);
-    if (!title) title = Label::createWithSystemFont("Star Abyss Frontier", "Arial", 64);
+    // ç‚¹å‡»éŸ³æ•ˆ
+    SimpleAudioEngine::getInstance()->playEffect("Sound/click_001.mp3");
 
-    title->setTextColor(Color4B(0, 255, 255, 255));
-    title->enableShadow(Color4B(0, 200, 255, 255), Size(0, 0), 20);
-    title->enableOutline(Color4B::BLACK, 2);
- 
-    if (title->getTTFConfig().fontFilePath != "") {
-        title->enableGlow(Color4B(0, 200, 255, 255));
-    }
-    title->setPosition(visibleSize.width / 2, visibleSize.height * 0.7);
-    this->addChild(title, 1);
-
-    // --------------------------------------------------------
-    // 3. Ö÷²Ëµ¥°´Å¥
-    // --------------------------------------------------------
-    auto startLabel = Label::createWithTTF("START GAME", "fonts/PermanentMarker-Regular.ttf", 48);
-    if (!startLabel) startLabel = Label::createWithSystemFont("START GAME", "Arial", 48);
-
-    auto startItem = MenuItemLabel::create(startLabel, [=](Ref* sender) {
-        SimpleAudioEngine::getInstance()->playEffect("Sound/click_001.mp3");
-        this->menuStartCallback(sender);
-        });
-
-    startItem->setColor(Color3B::YELLOW);
-    startItem->runAction(RepeatForever::create(Sequence::create(ScaleTo::create(1.0f, 1.1f), ScaleTo::create(1.0f, 1.0f), nullptr)));
-
-    auto exitLabel = Label::createWithTTF("EXIT GAME", "fonts/PermanentMarker-Regular.ttf", 48);
-    if (!exitLabel) exitLabel = Label::createWithSystemFont("EXIT GAME", "Arial", 48);
-
-    // µã»÷ÍË³ö£º²¥·ÅÒôÐ§ -> Ö´ÐÐ»Øµ÷
-    auto exitItem = MenuItemLabel::create(exitLabel, [=](Ref* sender) {
-        SimpleAudioEngine::getInstance()->playEffect("Sound/click_001.mp3");
-        this->menuExitCallback(sender);
-        });
-    exitItem->setColor(Color3B::RED);
-
-    _mainMenu = Menu::create(startItem, exitItem, NULL);
-    _mainMenu->alignItemsVerticallyWithPadding(60);
-    _mainMenu->setPosition(visibleSize.width / 2, visibleSize.height * 0.4);
-    this->addChild(_mainMenu, 1);
-
-    // --------------------------------------------------------
-    // 4. ×°ÊÎ·É»ú (»»·ô)
-    // --------------------------------------------------------
-    int savedSkin = UserDefault::getInstance()->getIntegerForKey("SkinID", 1);
-    std::string savedName = StringUtils::format("Images/Player/player_%d.png", savedSkin);
-    auto decorShip = Sprite::create(savedName);
-    if (!decorShip) decorShip = Sprite::create("Images/Player/myplane.png");
-
-    if (decorShip) {
-        decorShip->setPosition(visibleSize.width * 0.15, visibleSize.height * 0.20);
-
-        // Í³Ò»Ëõ·ÅÂß¼­
-        float targetWidth = 120.0f;
-        float currentWidth = decorShip->getContentSize().width;
-        decorShip->setScale(targetWidth / currentWidth);
-
-        this->addChild(decorShip, 1);
-
-        auto moveUp = MoveBy::create(1.5f, Vec2(0, 15));
-        auto moveDown = moveUp->reverse();
-        decorShip->runAction(RepeatForever::create(Sequence::create(moveUp, moveDown, nullptr)));
-
-        auto shipListener = EventListenerTouchOneByOne::create();
-        shipListener->setSwallowTouches(true);
-        shipListener->onTouchBegan = [decorShip](Touch* touch, Event* event) {
-            Vec2 p = decorShip->convertToNodeSpace(touch->getLocation());
-            Rect rect = Rect(0, 0, decorShip->getContentSize().width, decorShip->getContentSize().height);
-
-            if (rect.containsPoint(p)) {
-                // µã»÷ÒôÐ§
-                SimpleAudioEngine::getInstance()->playEffect("Sound/click_001.ogg");
-
-                int currentSkin = UserDefault::getInstance()->getIntegerForKey("SkinID", 1);
-                currentSkin++;
-                if (currentSkin > 3) currentSkin = 1;
-
-                UserDefault::getInstance()->setIntegerForKey("SkinID", currentSkin);
-                UserDefault::getInstance()->flush();
-
-                std::string nextName = StringUtils::format("Images/Player/player_%d.png", currentSkin);
-                if (FileUtils::getInstance()->isFileExist(nextName)) {
-                    decorShip->setTexture(nextName);
-                    // »»Í¼ºóÖØÖÃËõ·Å
-                    float targetW = 120.0f;
-                    float newW = decorShip->getContentSize().width;
-                    decorShip->setScale(targetW / newW);
-                }
-                decorShip->runAction(RotateBy::create(0.5f, 360));
-                return true;
-            }
-            return false;
-            };
-        _eventDispatcher->addEventListenerWithSceneGraphPriority(shipListener, decorShip);
+    // æŽ§åˆ¶éŸ³ä¹æš‚åœ/æ¢å¤
+    if (state) {
+      item->setNormalImage(Sprite::create("Images/Menu/audioOn.png")); // æ¢å›¾ã€
+      item->setScale(2.0f);
+      SimpleAudioEngine::getInstance()->resumeBackgroundMusic();
+    } else {
+      item->setNormalImage(Sprite::create("Images/Menu/audioOff.png")); // æ¢å›¾
+      item->setScale(2.0f);
+      SimpleAudioEngine::getInstance()->pauseBackgroundMusic();
     }
 
-    // --------------------------------------------------------
-    // 5. ÉèÖÃ°´Å¥ (¿ØÖÆÒôÀÖ¿ª¹Ø)
-    // --------------------------------------------------------
-    bool isAudioOn = UserDefault::getInstance()->getBoolForKey("AudioOn", true);
-    std::string btnImg = isAudioOn ? "Images/Menu/audioOn.png" : "Images/Menu/audioOff.png";
-    auto settingItem = MenuItemImage::create(
-        btnImg, btnImg,
-        [=](Ref* sender) {
-            auto item = static_cast<MenuItemImage*>(sender);
-            bool state = !UserDefault::getInstance()->getBoolForKey("AudioOn", true);
-            UserDefault::getInstance()->setBoolForKey("AudioOn", state);
-            UserDefault::getInstance()->flush();
+    item->runAction(Sequence::create(ScaleTo::create(0.1f, 2.4f),
+                                     ScaleTo::create(0.1f, 2.0f), nullptr));
+  });
+  settingItem->setScale(2.0f);
+  settingItem->setPosition(visibleSize.width - 50, visibleSize.height - 50);
 
-            // µã»÷ÒôÐ§
-            SimpleAudioEngine::getInstance()->playEffect("Sound/click_001.mp3");
+  auto settingMenu = Menu::create(settingItem, NULL);
+  settingMenu->setPosition(Vec2::ZERO);
+  this->addChild(settingMenu, 10);
 
-            // ¿ØÖÆÒôÀÖÔÝÍ£/»Ö¸´
-            if (state) {
-                item->setNormalImage(Sprite::create("Images/Menu/audioOn.png")); // »»Í¼¡¢
-                item->setScale(2.0f);
-                SimpleAudioEngine::getInstance()->resumeBackgroundMusic();
-            }
-            else {
-                item->setNormalImage(Sprite::create("Images/Menu/audioOff.png")); // »»Í¼
-                item->setScale(2.0f);
-                SimpleAudioEngine::getInstance()->pauseBackgroundMusic();
-            }
-
-            item->runAction(Sequence::create(ScaleTo::create(0.1f, 2.4f), ScaleTo::create(0.1f, 2.0f), nullptr));
-        }
-    );
-    settingItem->setScale(2.0f);
-    settingItem->setPosition(visibleSize.width - 50, visibleSize.height - 50);
-
-    auto settingMenu = Menu::create(settingItem, NULL);
-    settingMenu->setPosition(Vec2::ZERO);
-    this->addChild(settingMenu, 10);
-
-    return true;
+  return true;
 }
 
 // --------------------------------------------------------
-// µã»÷¿ªÊ¼ºó
+// ç‚¹å‡»å¼€å§‹åŽ
 // --------------------------------------------------------
-void MenuScene::menuStartCallback(Ref* pSender)
-{
-    if (_mainMenu) _mainMenu->setVisible(false);
+void MenuScene::menuStartCallback(Ref *pSender) {
+  if (_mainMenu)
+    _mainMenu->setVisible(false);
 
-    auto visibleSize = Director::getInstance()->getVisibleSize();
+  auto visibleSize = Director::getInstance()->getVisibleSize();
 
-    // 1. ÊäÈë¿ò
-    auto textField = TextField::create("Your Name", "Arial", 48);
-    textField->setPosition(Vec2(visibleSize.width / 2, visibleSize.height * 0.55));
-    textField->setTextColor(Color4B::ORANGE);
-    textField->setCursorEnabled(true);
-    textField->setMaxLength(12);
-    this->addChild(textField, 2);
+  // 1. è¾“å…¥æ¡†
+  auto textField = TextField::create("Your Name", "Arial", 48);
+  textField->setPosition(
+      Vec2(visibleSize.width / 2, visibleSize.height * 0.60));
+  textField->setTextColor(Color4B::ORANGE);
+  textField->setCursorEnabled(true);
+  textField->setMaxLength(12);
+  this->addChild(textField, 2);
 
-    // 2. È·ÈÏ³ö»÷°´Å¥
-    auto confirmLabel = Label::createWithTTF("LAUNCH !!", "fonts/PermanentMarker-Regular.ttf", 56);
-    if (!confirmLabel) confirmLabel = Label::createWithSystemFont("LAUNCH !!", "Arial", 56);
+  // 2. æ¨¡å¼åˆ‡æ¢æŒ‰é’® (å•äºº/åŒäºº)
+  _playerMode = 1; // é»˜è®¤å•äººæ¨¡å¼
+  std::string modeText = "MODE: 1 PLAYER";
 
-    auto confirmItem = MenuItemLabel::create(confirmLabel, [=](Ref* sender) {
-        // --- [ÐÞ¸Ä] µã»÷LAUNCHºóµÄÂß¼­ ---
+  auto modeLabel =
+      Label::createWithTTF(modeText, "fonts/BlackOpsOne-Regular.ttf", 40);
+  if (!modeLabel)
+    modeLabel = Label::createWithSystemFont(modeText, "Arial", 40);
+  _modeLabel = modeLabel;
 
-        // 1. ²¥·Å³ö»÷ÒôÐ§
-        SimpleAudioEngine::getInstance()->playEffect("Sound/launch.ogg");
+  auto modeItem = MenuItemLabel::create(modeLabel, [this](Ref *sender) {
+    SimpleAudioEngine::getInstance()->playEffect("Sound/click_001.mp3");
 
-        // 2. Í£Ö¹²Ëµ¥ÒôÀÖ (·ÀÖ¹ºÍÓÎÏ·ÒôÀÖÖØµþ)
-        SimpleAudioEngine::getInstance()->stopBackgroundMusic();
+    // åˆ‡æ¢æ¨¡å¼
+    _playerMode = (_playerMode == 1) ? 2 : 1;
+    if (_modeLabel) {
+      _modeLabel->setString(_playerMode == 1 ? "MODE: 1 PLAYER"
+                                             : "MODE: 2 PLAYERS");
+      _modeLabel->setColor(_playerMode == 1 ? Color3B(0, 255, 255)
+                                            : Color3B::GREEN);
+    }
+  });
+  modeItem->setColor(Color3B(0, 255, 255));
+  modeItem->setPosition(visibleSize.width / 2, visibleSize.height * 0.50);
 
-        // 3. ±£´æÃû×Ö
-        std::string name = textField->getString();
-        if (name.empty()) name = "Pilot";
-        UserDefault::getInstance()->setStringForKey("PlayerName", name);
-        UserDefault::getInstance()->flush();
+  // 3. ç¡®è®¤å‡ºå‡»æŒ‰é’®
+  auto confirmLabel = Label::createWithTTF(
+      "LAUNCH !!", "fonts/PermanentMarker-Regular.ttf", 56);
+  if (!confirmLabel)
+    confirmLabel = Label::createWithSystemFont("LAUNCH !!", "Arial", 56);
 
-        // 4. ½øÓÎÏ·
-        auto gameScene = HelloWorld::createScene();
-        Director::getInstance()->replaceScene(TransitionFade::create(1.0f, gameScene));
-        });
-    confirmItem->setColor(Color3B::YELLOW);
-    confirmItem->setPosition(visibleSize.width / 2, visibleSize.height * 0.35);
+  auto confirmItem = MenuItemLabel::create(confirmLabel, [=](Ref *sender) {
+    // 1. æ’­æ”¾å‡ºå‡»éŸ³æ•ˆ
+    SimpleAudioEngine::getInstance()->playEffect("Sound/launch.ogg");
 
-    // 3. µØÍ¼ÇÐ»»°´Å¥
-    int mapId = UserDefault::getInstance()->getIntegerForKey("MapID", 1);
-    std::string mapText = (mapId == 1) ? "MAP: GALAXY" : "MAP: NEBULA";
+    // 2. åœæ­¢èœå•éŸ³ä¹
+    SimpleAudioEngine::getInstance()->stopBackgroundMusic();
 
-    auto mapLabel = Label::createWithTTF(mapText, "fonts/BlackOpsOne-Regular.ttf", 40);
-    if (!mapLabel) mapLabel = Label::createWithSystemFont(mapText, "Arial", 40);
+    // 3. ä¿å­˜åå­—
+    std::string name = textField->getString();
+    if (name.empty())
+      name = "Pilot";
+    UserDefault::getInstance()->setStringForKey("PlayerName", name);
+    UserDefault::getInstance()->flush();
 
-    auto mapItem = MenuItemLabel::create(mapLabel, [mapLabel](Ref* sender) {
-        // µã»÷ÒôÐ§
-        SimpleAudioEngine::getInstance()->playEffect("Sound/click_001.mp3");
+    // 4. è¿›æ¸¸æˆ (ä¼ å…¥çŽ©å®¶æ¨¡å¼)
+    auto gameScene = HelloWorld::createScene(_playerMode);
+    Director::getInstance()->replaceScene(
+        TransitionFade::create(1.0f, gameScene));
+  });
+  confirmItem->setColor(Color3B::YELLOW);
+  confirmItem->setPosition(visibleSize.width / 2, visibleSize.height * 0.35);
 
-        int currId = UserDefault::getInstance()->getIntegerForKey("MapID", 1);
-        currId = (currId == 1) ? 2 : 1;
-        UserDefault::getInstance()->setIntegerForKey("MapID", currId);
-        UserDefault::getInstance()->flush();
-        mapLabel->setString((currId == 1) ? "MAP: GALAXY" : "MAP: NEBULA");
-        });
-    mapItem->setColor(Color3B::MAGENTA);
-    mapItem->setPosition(visibleSize.width / 2, visibleSize.height * 0.45);
+  // 4. åœ°å›¾åˆ‡æ¢æŒ‰é’®
+  int mapId = UserDefault::getInstance()->getIntegerForKey("MapID", 1);
+  std::string mapText = (mapId == 1) ? "MAP: GALAXY" : "MAP: NEBULA";
 
-    auto subMenu = Menu::create(confirmItem, mapItem, NULL);
-    subMenu->setPosition(Vec2::ZERO);
-    this->addChild(subMenu, 2);
+  auto mapLabel =
+      Label::createWithTTF(mapText, "fonts/BlackOpsOne-Regular.ttf", 40);
+  if (!mapLabel)
+    mapLabel = Label::createWithSystemFont(mapText, "Arial", 40);
+
+  auto mapItem = MenuItemLabel::create(mapLabel, [mapLabel](Ref *sender) {
+    SimpleAudioEngine::getInstance()->playEffect("Sound/click_001.mp3");
+
+    int currId = UserDefault::getInstance()->getIntegerForKey("MapID", 1);
+    currId = (currId == 1) ? 2 : 1;
+    UserDefault::getInstance()->setIntegerForKey("MapID", currId);
+    UserDefault::getInstance()->flush();
+    mapLabel->setString((currId == 1) ? "MAP: GALAXY" : "MAP: NEBULA");
+  });
+  mapItem->setColor(Color3B::MAGENTA);
+  mapItem->setPosition(visibleSize.width / 2, visibleSize.height * 0.42);
+
+  auto subMenu = Menu::create(confirmItem, modeItem, mapItem, NULL);
+  subMenu->setPosition(Vec2::ZERO);
+  this->addChild(subMenu, 2);
 }
 
-void MenuScene::menuExitCallback(Ref* pSender)
-{
-    Director::getInstance()->end();
+void MenuScene::menuExitCallback(Ref *pSender) {
+  Director::getInstance()->end();
 #if (CC_TARGET_PLATFORM == CC_PLATFORM_IOS)
-    exit(0);
+  exit(0);
 #endif
 }

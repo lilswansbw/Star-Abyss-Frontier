@@ -1,23 +1,24 @@
 #ifndef __MENU_SCENE_H__
 #define __MENU_SCENE_H__
 
-#include "ui/CocosGUI.h"
 #include "cocos2d.h"
+#include "ui/CocosGUI.h"
 
-class MenuScene : public cocos2d::Scene
-{
+
+class MenuScene : public cocos2d::Scene {
 public:
-    static cocos2d::Scene* createScene();
-    virtual bool init(); // 初始化函数
+  static cocos2d::Scene *createScene();
+  virtual bool init();
 
-    // 点击“开始按钮”时执行的函数
-    void menuStartCallback(cocos2d::Ref* pSender);
+  void menuStartCallback(cocos2d::Ref *pSender);
+  void menuExitCallback(cocos2d::Ref *pSender);
 
-    void menuExitCallback(cocos2d::Ref* pSender);
+  CREATE_FUNC(MenuScene);
 
-    CREATE_FUNC(MenuScene); // 必写的宏
 private:
-    cocos2d::Menu* _mainMenu;
+  cocos2d::Menu *_mainMenu;
+  int _playerMode = 1;        // 鐜╁妯″紡 (1=鍗曚汉, 2=鍙屼汉)
+  cocos2d::Label *_modeLabel; // 妯″紡鏄剧ず鏍囩
 };
 
 #endif // __MENU_SCENE_H__

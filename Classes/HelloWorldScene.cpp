@@ -11,15 +11,32 @@ USING_NS_CC;
 using namespace CocosDenshion;
 
 // ============================================================
-// 1. 【修复 LNK2019】补上 createScene 的实现
-//    这是导致 MenuScene 报错的元凶
+// 1. createScene 支持玩家模式参数
 // ============================================================
-Scene *HelloWorld::createScene() { return HelloWorld::create(); }
+Scene *HelloWorld::createScene(int playerMode) {
+  return HelloWorld::createWithMode(playerMode);
+}
+
+HelloWorld *HelloWorld::createWithMode(int playerMode) {
+  HelloWorld *ret = new (std::nothrow) HelloWorld();
+  if (ret && ret->initWithMode(playerMode)) {
+    ret->autorelease();
+    return ret;
+  }
+  CC_SAFE_DELETE(ret);
+  return nullptr;
+}
 
 // ============================================================
 // 2. 初始化函数
 // ============================================================
 bool HelloWorld::init() {
+  return initWithMode(1); // 默认单人模式
+}
+
+bool HelloWorld::initWithMode(int playerMode) {
+  _playerMode = playerMode;
+
   if (!Scene::init())
     return false;
 
@@ -30,15 +47,30 @@ bool HelloWorld::init() {
   auto visibleSize = Director::getInstance()->getVisibleSize();
   Vec2 origin = Director::getInstance()->getVisibleOrigin();
 
-  // ----------------------------------------------------
-  // [重构部分] 创建主角 (现在代码非常简洁)
-  // ----------------------------------------------------
-  // 注意：如果 Player::create() 报错，请检查 Player.h 是否正确引入
-  _player = Player::create();
-  if (_player) {
-    // 设置初始位置
-    _player->setPosition(Vec2(visibleSize.width / 2, visibleSize.height / 4));
-    this->addChild(_player, 1);
+  // ============================================================
+  // [多人模式] 创建玩家
+  // ============================================================
+  _isPlayerDead = false;
+  _keyW = _keyA = _keyS = _keyD = false;
+
+  // P1: 鼠标控制
+  Player *player1 = Player::createWithControl(PlayerControlType::MOUSE, 1);
+  if (player1) {
+    player1->setPosition(Vec2(visibleSize.width / 3, visibleSize.height / 4));
+    this->addChild(player1, 1);
+    _players.pushBack(player1);
+    _player = player1; // 保持兼容性
+  }
+
+  // P2: 键盘控制 (仅双人模式)
+  if (_playerMode >= 2) {
+    Player *player2 = Player::createWithControl(PlayerControlType::KEYBOARD, 2);
+    if (player2) {
+      player2->setPosition(
+          Vec2(visibleSize.width * 2 / 3, visibleSize.height / 4));
+      this->addChild(player2, 1);
+      _players.pushBack(player2);
+    }
   }
 
   // ----------------------------------------------------
@@ -105,16 +137,35 @@ bool HelloWorld::init() {
   // ==========================================
   // [子弹时间] 添加键盘监听器
   // ==========================================
-  _isShiftPressed = false; // 初始化 Shift 键状态
+  _isShiftPressed = false;
 
   auto keyboardListener = EventListenerKeyboard::create();
 
   // 键盘按下事件
   keyboardListener->onKeyPressed = [this](EventKeyboard::KeyCode keyCode,
                                           Event *event) {
+    // [子弹时间] Shift
     if (keyCode == EventKeyboard::KeyCode::KEY_SHIFT) {
       _isShiftPressed = true;
     }
+    // [时空回溯] R键 - 对 P1 生效
+    if (keyCode == EventKeyboard::KeyCode::KEY_R) {
+      for (auto player : _players) {
+        if (player && player->isAlive() && player->getPlayerIndex() == 1) {
+          player->setRewinding(true);
+        }
+      }
+    }
+    // [P2 移动] WASD 键盘控制
+    if (keyCode == EventKeyboard::KeyCode::KEY_W)
+      _keyW = true;
+    if (keyCode == EventKeyboard::KeyCode::KEY_A)
+      _keyA = true;
+    if (keyCode == EventKeyboard::KeyCode::KEY_S)
+      _keyS = true;
+    if (keyCode == EventKeyboard::KeyCode::KEY_D)
+      _keyD = true;
+    updateP2MoveDirection();
   };
 
   // 键盘释放事件
@@ -123,6 +174,23 @@ bool HelloWorld::init() {
     if (keyCode == EventKeyboard::KeyCode::KEY_SHIFT) {
       _isShiftPressed = false;
     }
+    if (keyCode == EventKeyboard::KeyCode::KEY_R) {
+      for (auto player : _players) {
+        if (player && player->getPlayerIndex() == 1) {
+          player->setRewinding(false);
+        }
+      }
+    }
+    // [P2 移动] WASD 释放
+    if (keyCode == EventKeyboard::KeyCode::KEY_W)
+      _keyW = false;
+    if (keyCode == EventKeyboard::KeyCode::KEY_A)
+      _keyA = false;
+    if (keyCode == EventKeyboard::KeyCode::KEY_S)
+      _keyS = false;
+    if (keyCode == EventKeyboard::KeyCode::KEY_D)
+      _keyD = false;
+    updateP2MoveDirection();
   };
 
   _eventDispatcher->addEventListenerWithSceneGraphPriority(keyboardListener,
@@ -300,17 +368,13 @@ void HelloWorld::createEnemy(float dt) {
 // 5. 碰撞检测
 // ============================================================
 void HelloWorld::checkCollisions() {
-  if (_isPlayerDead || !_player)
-    return;
-
-  Player *player = dynamic_cast<Player *>(_player);
-  if (!player || !player->isAlive())
+  if (areAllPlayersDead())
     return;
 
   auto visibleSize = Director::getInstance()->getVisibleSize();
 
   // =================================================================
-  // 1. [敌方子弹] 撞 [主角]
+  // 1. [敌方子弹] 撞 [玩家] - 遍历所有玩家
   // =================================================================
   for (auto eb_it = _enemyBullets.begin(); eb_it != _enemyBullets.end();) {
     Sprite *bullet = *eb_it;
@@ -322,26 +386,42 @@ void HelloWorld::checkCollisions() {
       continue;
     }
 
-    // 判定碰撞
+    // 判定碰撞 - 检测所有玩家
     bool hitPlayer = false;
-    Rect playerRect = player->getBoundingBox();
-    playerRect.origin.x += 15;
-    playerRect.size.width -= 30;
-    playerRect.origin.y += 15;
-    playerRect.size.height -= 30;
+    for (auto player : _players) {
+      if (!player || !player->isAlive())
+        continue;
 
-    if (bullet->getBoundingBox().intersectsRect(playerRect)) {
-      hitPlayer = true;
-      bullet->removeFromParentAndCleanup(true);
+      Rect playerRect = player->getBoundingBox();
+      playerRect.origin.x += 15;
+      playerRect.size.width -= 30;
+      playerRect.origin.y += 15;
+      playerRect.size.height -= 30;
 
-      player->takeDamage(1);
+      if (bullet->getBoundingBox().intersectsRect(playerRect)) {
+        hitPlayer = true;
+        bullet->removeFromParentAndCleanup(true);
+        player->takeDamage(1);
 
-      if (!player->isAlive()) {
-        spawnExplosion(player->getPosition());
-        player->onDeath();
-        _isPlayerDead = true;
-        this->scheduleOnce([=](float dt) { this->gameOver(); }, 1.0f,
-                           "GameOverDelay");
+        if (!player->isAlive()) {
+          player->onDeath();
+
+          // 检查是否所有玩家都死亡
+          bool allDead = areAllPlayersDead();
+
+          // 生成爆炸效果，只在所有玩家死亡时播放音效
+          spawnExplosion(player->getPosition(), allDead);
+
+          if (allDead) {
+            _isPlayerDead = true;
+            this->scheduleOnce([=](float dt) { this->gameOver(); }, 1.0f,
+                               "GameOverDelay");
+          } else {
+            // 双人模式：一个玩家死亡但另一个存活，5秒后复活
+            schedulePlayerRespawn(player);
+          }
+        }
+        break; // 子弹只能击中一个玩家
       }
     }
 
@@ -355,13 +435,11 @@ void HelloWorld::checkCollisions() {
   }
 
   // =================================================================
-  // 2. [我方子弹] 撞 [敌机] (改为：遍历子弹 -> 遍历敌人)
-  //    这样能保证一颗子弹只命中一个敌人，并且立即消失，避免穿透
+  // 2. [我方子弹] 撞 [敌机]
   // =================================================================
   for (auto b_it = _playerBullets.begin(); b_it != _playerBullets.end();) {
     Sprite *bullet = *b_it;
 
-    // 越界清理
     if (bullet->getPositionY() > visibleSize.height) {
       bullet->removeFromParent();
       b_it = _playerBullets.erase(b_it);
@@ -370,30 +448,29 @@ void HelloWorld::checkCollisions() {
 
     bool bulletHit = false;
 
-    // 内层循环遍历所有敌人
     for (auto e_it = _enemies.begin(); e_it != _enemies.end();) {
       Enemy *enemy = dynamic_cast<Enemy *>(*e_it);
 
-      // 忽略还要屏幕外的敌人(刚生成)
       if (!enemy || enemy->getPositionY() > visibleSize.height) {
         ++e_it;
         continue;
       }
 
       if (bullet->getBoundingBox().intersectsRect(enemy->getBoundingBox())) {
-        // 命中！
         bulletHit = true;
 
-        // 伤害计算
+        // 伤害计算 - 使用第一个存活玩家的伤害值
         int damage = 1;
-        if (player)
-          damage = player->getDamage();
+        for (auto p : _players) {
+          if (p && p->isAlive()) {
+            damage = p->getDamage();
+            break;
+          }
+        }
         enemy->takeDamage(damage);
 
-        // 敌人死亡判定
         if (!enemy->isAlive()) {
           enemy->boom();
-          // 计分
           if (dynamic_cast<BossEnemy *>(enemy)) {
             addScore(1000);
             showFloatingScore(enemy->getPosition(), 1000);
@@ -402,7 +479,6 @@ void HelloWorld::checkCollisions() {
             showFloatingScore(enemy->getPosition(), 100);
           }
 
-          // 掉落道具
           if (CCRANDOM_0_1() < 0.5f) {
             auto item = Item::createRandom();
             item->setPosition(enemy->getPosition());
@@ -411,16 +487,10 @@ void HelloWorld::checkCollisions() {
             _items.pushBack(item);
           }
 
-          // 从数组删除 (boom() 会处理节点移除和爆炸动画)
           e_it = _enemies.erase(e_it);
         } else {
-          // 敌人没死，继续检查下一个敌人 (理论上这步不会执行，因为我们要 break)
-          // 但如果想做穿透弹，就不 break
           ++e_it;
         }
-
-        // 【关键】子弹命中后，Break 出内层循环
-        // 这样这颗子弹就不会再去判定其他敌人了
         break;
       } else {
         ++e_it;
@@ -428,7 +498,6 @@ void HelloWorld::checkCollisions() {
     }
 
     if (bulletHit) {
-      // 子弹没了
       bullet->removeFromParentAndCleanup(true);
       b_it = _playerBullets.erase(b_it);
     } else {
@@ -437,34 +506,48 @@ void HelloWorld::checkCollisions() {
   }
 
   // =================================================================
-  // 3. [敌机] 撞 [主角] (身体碰撞)
+  // 3. [敌机] 撞 [玩家] (身体碰撞) - 遍历所有玩家
   // =================================================================
   for (auto e_it = _enemies.begin(); e_it != _enemies.end();) {
     Enemy *enemy = dynamic_cast<Enemy *>(*e_it);
     bool isCrash = false;
 
-    // 既然上面可能已经把死人移除了，这里生还的都是活人
     if (enemy && enemy->getPositionY() <= visibleSize.height) {
-      Rect playerRect = player->getBoundingBox();
-      playerRect.origin.x += 15;
-      playerRect.size.width -= 30;
-      playerRect.origin.y += 15;
-      playerRect.size.height -= 30;
+      for (auto player : _players) {
+        if (!player || !player->isAlive())
+          continue;
 
-      if (playerRect.intersectsRect(enemy->getBoundingBox())) {
-        isCrash = true;
+        Rect playerRect = player->getBoundingBox();
+        playerRect.origin.x += 15;
+        playerRect.size.width -= 30;
+        playerRect.origin.y += 15;
+        playerRect.size.height -= 30;
 
-        spawnExplosion(player->getPosition());
+        if (playerRect.intersectsRect(enemy->getBoundingBox())) {
+          isCrash = true;
 
-        // 双方都死
-        enemy->takeDamage(9999);
-        if (!enemy->isAlive())
-          enemy->boom();
+          enemy->takeDamage(9999);
+          if (!enemy->isAlive())
+            enemy->boom();
 
-        player->onDeath();
-        _isPlayerDead = true;
-        this->scheduleOnce([=](float dt) { this->gameOver(); }, 1.0f,
-                           "GameOverDelay");
+          player->onDeath();
+
+          // 检查是否所有玩家都死亡
+          bool allDead = areAllPlayersDead();
+
+          // 生成爆炸效果，只在所有玩家死亡时播放音效
+          spawnExplosion(player->getPosition(), allDead);
+
+          if (allDead) {
+            _isPlayerDead = true;
+            this->scheduleOnce([=](float dt) { this->gameOver(); }, 1.0f,
+                               "GameOverDelay");
+          } else {
+            // 双人模式：一个玩家死亡但另一个存活，5秒后复活
+            schedulePlayerRespawn(player);
+          }
+          break;
+        }
       }
     }
 
@@ -482,17 +565,19 @@ void HelloWorld::checkCollisions() {
 // 6. 射击与子弹管理
 // ============================================================
 void HelloWorld::playerShoot(float dt) {
-  Player *p = dynamic_cast<Player *>(_player);
-  if (!p || !p->isAlive())
-    return;
+  // 遍历所有玩家，为每个存活玩家发射子弹
+  for (auto player : _players) {
+    if (!player || !player->isAlive())
+      continue;
 
-  // 调用 Player 的射击接口，获取子弹
-  Sprite *bullet = p->shoot();
+    // 调用 Player 的射击接口，获取子弹
+    Sprite *bullet = player->shoot();
 
-  if (bullet) {
-    bullet->setTag(200);
-    this->addChild(bullet, 0);
-    _playerBullets.pushBack(bullet);
+    if (bullet) {
+      bullet->setTag(200 + player->getPlayerIndex()); // P1=201, P2=202
+      this->addChild(bullet, 0);
+      _playerBullets.pushBack(bullet);
+    }
   }
 }
 
@@ -655,7 +740,7 @@ void HelloWorld::removeBullet(Node *bullet) {
 // ============================================================
 // 7. 辅助函数 (GameOver, Explosion)
 // ============================================================
-void HelloWorld::spawnExplosion(Vec2 pos) {
+void HelloWorld::spawnExplosion(Vec2 pos, bool playSound) {
   // 这里使用你之前改好的切图逻辑
   auto texture = Director::getInstance()->getTextureCache()->addImage(
       "Images/Effect/Effect.png");
@@ -687,7 +772,11 @@ void HelloWorld::spawnExplosion(Vec2 pos) {
 
   auto animate = Animate::create(animation);
   auto remove = RemoveSelf::create();
-  SimpleAudioEngine::getInstance()->playEffect("Sound/explode.mp3");
+
+  // 只在需要时播放爆炸音效
+  if (playSound) {
+    SimpleAudioEngine::getInstance()->playEffect("Sound/explode.mp3");
+  }
   explosion->runAction(Sequence::create(animate, remove, nullptr));
 }
 
@@ -870,13 +959,7 @@ void HelloWorld::showFloatingScore(Vec2 pos, int score) {
 }
 
 void HelloWorld::checkItemCollisions() {
-  // 如果主角死了，就别捡东西了
-  if (_isPlayerDead || !_player)
-    return;
-
-  // 强转为 Player* 以便调用 upgradeFirepower
-  Player *player = dynamic_cast<Player *>(_player);
-  if (!player)
+  if (areAllPlayersDead())
     return;
 
   // 遍历所有道具
@@ -890,36 +973,110 @@ void HelloWorld::checkItemCollisions() {
       continue;
     }
 
-    // 2. 碰撞检测：主角撞到了道具
-    if (player->getBoundingBox().intersectsRect(item->getBoundingBox())) {
-      // === 根据类型触发效果 ===
-      switch (item->getType()) {
-      case ItemType::HP:
-        // 加血 (之前在 BaseEntity 写的)
-        player->heal(1);
-        break;
+    // 2. 检查每个玩家是否捡到道具
+    bool itemPicked = false;
+    for (auto player : _players) {
+      if (!player || !player->isAlive())
+        continue;
 
-      case ItemType::POWER:
-        // 升级火力 (之前在 Player 写的)
-        player->upgradeFirepower();
-        break;
+      if (player->getBoundingBox().intersectsRect(item->getBoundingBox())) {
+        // === 根据类型触发效果 ===
+        switch (item->getType()) {
+        case ItemType::HP:
+          player->heal(1);
+          break;
+        case ItemType::POWER:
+          player->upgradeFirepower();
+          break;
+        case ItemType::SKIN:
+          this->addScore(500);
+          this->showFloatingScore(player->getPosition(), 500);
+          break;
+        }
 
-      case ItemType::SKIN:
-        // 暂时当成“大分”来吃，加 500 分
-        this->addScore(500);
-        this->showFloatingScore(player->getPosition(), 500);
-        break;
+        itemPicked = true;
+        break; // 一个道具只能被一个玩家捡
       }
+    }
 
-      // === 播放音效 (可选) ===
-      // SimpleAudioEngine::getInstance()->playEffect("Sound/get_item.mp3");
-
-      // === 吃完后销毁道具 ===
+    if (itemPicked) {
       item->removeFromParent();
-      it = _items.erase(it); // 从数组移除并指向下一个
+      it = _items.erase(it);
     } else {
-      // 没撞到，检查下一个
       ++it;
     }
   }
+}
+
+// ==========================================
+// [双人模式] 辅助函数
+// ==========================================
+void HelloWorld::updateP2MoveDirection() {
+  // 找到 P2 玩家并更新移动方向
+  for (auto player : _players) {
+    if (player && player->getPlayerIndex() == 2) {
+      Vec2 dir = Vec2::ZERO;
+      if (_keyW)
+        dir.y += 1;
+      if (_keyS)
+        dir.y -= 1;
+      if (_keyA)
+        dir.x -= 1;
+      if (_keyD)
+        dir.x += 1;
+
+      // 归一化方向（防止斜向移动过快）
+      if (dir != Vec2::ZERO) {
+        dir.normalize();
+      }
+      player->setMoveDirection(dir);
+    }
+  }
+}
+
+bool HelloWorld::areAllPlayersDead() {
+  if (_players.empty())
+    return true;
+
+  for (auto player : _players) {
+    if (player && player->isAlive()) {
+      return false;
+    }
+  }
+  return true;
+}
+
+// ==========================================
+// [双人模式] 调度玩家复活（5秒后）
+// ==========================================
+void HelloWorld::schedulePlayerRespawn(Player *deadPlayer) {
+  if (!deadPlayer)
+    return;
+
+  // 生成唯一的调度器名称
+  std::string scheduleName =
+      StringUtils::format("RespawnPlayer%d", deadPlayer->getPlayerIndex());
+
+  auto visibleSize = Director::getInstance()->getVisibleSize();
+
+  // 5秒后复活
+  this->scheduleOnce(
+      [=](float dt) {
+        // 如果所有玩家都死了（游戏已结束），不执行复活
+        if (areAllPlayersDead()) {
+          return;
+        }
+
+        // 确定复活位置（屏幕底部）
+        Vec2 respawnPos;
+        if (deadPlayer->getPlayerIndex() == 1) {
+          respawnPos = Vec2(visibleSize.width / 3, visibleSize.height / 4);
+        } else {
+          respawnPos = Vec2(visibleSize.width * 2 / 3, visibleSize.height / 4);
+        }
+
+        // 执行复活
+        deadPlayer->respawn(respawnPos);
+      },
+      5.0f, scheduleName);
 }
